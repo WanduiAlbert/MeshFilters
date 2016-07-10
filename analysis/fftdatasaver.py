@@ -11,9 +11,13 @@ A = 0.0003
 L = 2.25*25.4
 nu_fsr = c/(2*L)
 
-n = 50000
-nu = np.linspace(150, 150 + nu_fsr, n) # Range of frequencies of interest
-x = nu/nu_fsr
+min_x =  int(150/nu_fsr) + 1
+max_x = min_x + 1
+n = 2**20
+# nu = np.linspace(150, 150 + nu_fsr, n) # Range of frequencies of interest
+# x = nu/nu_fsr
+x = np.linspace(min_x, max_x, n)
+nu = x*nu_fsr
 
 F = 4*R/(1-R)**2
 delta = 2*np.pi*x
@@ -24,11 +28,11 @@ P = (T/(1-R))**2*1./(1 + F*np.sin(delta/2)**2)
 filename = 'fft_data.dat'
 f = open(filename, 'w')
 
-fig, ax = plt.subplots(figsize=(15,10))
-ax.plot(nu, P)
-ax.set_xlabel(r'Frequency [GHz]')
-ax.set_ylabel(r'Transmission')
-plt.show()
+# fig, ax = plt.subplots(figsize=(15,10))
+# ax.plot(nu, P)
+# ax.set_xlabel(r'Frequency [GHz]')
+# ax.set_ylabel(r'Transmission')
+# plt.show()
 
 f.write('%d\n' %n)
 np.savetxt(f, P)
