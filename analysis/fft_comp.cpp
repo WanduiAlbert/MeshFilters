@@ -13,22 +13,35 @@ using namespace std;
 
 int main()
 {
-    /* First load in the data array that contains the data to be fourier transformed */   
+    /* Create the data arrays that will hold the data to be fourier transformed. Need to read out the number of data points
+    in the array first */   
     string filename = "fft_data.dat";
     ifstream dataloader(filename.c_str());
-    int n;
-    double *data_in = (double *)fftw_malloc(n*sizeof(double));    /* The size of the output array is n/2 + 1*/
-    //complex<double>  *data_out = (complex<double> *)fftw_malloc((n/2 + 1)*sizeof(complex<double> ));
-    complex<double> *data_out = (complex<double> *)fftw_malloc(n*sizeof(complex<double>));
-
-    /* Now we can compute the actual discrete fourier transform with n samples */
-    fftw_plan plan = fftw_plan_dft_r2c_1d(n, data_in, reinterpret_cast<fftw_complex*>(data_out), FFTW_MEASURE);
-
-
-    if (dataloader.is_open())
+    int n = 0;
+    if (dataloader.is_open()) 
     {
         dataloader >> n;
         cout << "The no of data points: " << n << endl;
+    }
+    else
+    {
+        cout << "Failed to open this file!" << endl;
+        return 1;
+    }
+
+    /* Since we are doing a real-to-complex fft, the size of the input array is n while that of the output is a (n/2+1)
+      array of complex<double> values. */
+    double *data_in = (double *)fftw_malloc(n*sizeof(double));    
+    /* The size of the output array is n/2 + 1*/
+    complex<double> *data_out = (complex<double> *)fftw_malloc((n/2+1)*sizeof(complex<double>));
+
+    /* Before loading in the data, we have to initialize the fft plan. */
+    fftw_plan plan = fftw_plan_dft_r2c_1d(n, data_in, reinterpret_cast<fftw_complex*>(data_out), FFTW_MEASURE);
+
+    /* Load in all the data from the data file. 
+        We have already read in the first entry which is the number of data points. */
+    if (dataloader.is_open())
+    {
         for (int i =0 ; i < n; i++)
         {
             dataloader >> data_in[i];
@@ -38,6 +51,7 @@ int main()
     else
     {
         cout << "Failed to open this file!" << endl;
+        return 1;
     }
 
     cout << "The first data point is " << data_in[0] << endl;
@@ -45,8 +59,9 @@ int main()
     cout << "Data successfully loaded!!!" << endl;
 
     cout << "Starting to compute the DFT " << endl;
-    cout << "Plan completed. Now for the execution!!!!" << endl;
+    /* Now we can compute the actual discrete fourier transform with n samples */
     fftw_execute(plan);
+
     cout << "DFT successfully computed. Writing the results to file. " << endl;
     
     cout << "The first data point output is " << data_out[0] << endl;
