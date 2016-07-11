@@ -1,6 +1,4 @@
 import numpy as np
-import matplotlib
-matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from astropy.constants import c
 c = c.value*1e-6 #Speed of light in mm/ns
@@ -13,7 +11,7 @@ nu_fsr = c/(2*L)
 
 min_x =  int(150/nu_fsr) + 1
 max_x = min_x + 1
-n = 2**20
+n = 2**23
 x = np.linspace(min_x, max_x, n)
 nu = x*nu_fsr
 # nu = np.linspace(150, 150 + nu_fsr, n) # Range of frequencies of interest

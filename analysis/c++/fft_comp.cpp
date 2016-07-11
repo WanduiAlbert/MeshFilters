@@ -7,6 +7,7 @@
 #include <string>
 #include <fftw3.h>
 #include <fstream>
+#include <iomanip>
 
 using namespace std;
 
@@ -70,7 +71,7 @@ int main()
     if (datasaver.is_open())
     {
         for (int i = 0; i < (n/2+1); i++)
-            datasaver << real(data_out[i])<< " " << imag(data_out[i]) << endl;
+            datasaver << setprecision(9)<< real(data_out[i])<< " " << imag(data_out[i]) << endl;
         datasaver.close();
     }
     else
