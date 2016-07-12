@@ -1,1 +1,3 @@
 .DS_Store
+analysis/fft_data.dat
+analysis/fft_results.dat
