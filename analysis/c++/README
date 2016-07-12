@@ -1,0 +1,4 @@
+To execute this code, follow the steps below:
+1. Run fftsaver.py to produce a data file of the region we want
+2. Run ./fftcomp to get the fourier transform
+3. Run fftreader.py to obtain the results
