@@ -52,8 +52,8 @@ int main()
         return 1;
     }
 
-    cout << "The first data point is " << data_in[0] << endl;
-    cout << "The last data point is " << data_in[n-1] << endl;
+    cout << "The first data point is " << setprecision(9) << data_in[0] << endl;
+    cout << "The last data point is " << setprecision(9) << data_in[n-1] << endl;
     cout << "Data successfully loaded!!!" << endl;
 
     cout << "Starting to compute the DFT " << endl;
