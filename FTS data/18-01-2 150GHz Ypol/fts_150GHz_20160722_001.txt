@@ -1,6 +1,4 @@
-# NO SAMPLE -ONE ARM SCANS
-6
-SAMPLE -- ONE ARM SCANS
+#SAMPLE -- ONE ARM SCANS
 FTS 150 GHz source w/rect feedhorn, rect feedhorn on detect.
 
 SAMPLE: 603-604 etalon with a 3" spacing. Changing mm/sec requested to 1.50. Not done for any of the previous 150GHz scans. Y polarization

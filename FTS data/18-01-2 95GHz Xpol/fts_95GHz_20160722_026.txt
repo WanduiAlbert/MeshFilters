@@ -1,6 +1,4 @@
-# NO SAMPLE -ONE ARM SCANS
- SAMPLE
-SAMPLE
+#SAMPLE
 FTS 95 GHz source w/rect feedhorn, rect feedhorn on detect.
 
 SAMPLE: 603-604 etalon with a 3" spacing. mm/sec requested to 2.00. Y polarization
