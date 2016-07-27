@@ -3,15 +3,13 @@ XY raster, 95 GHz, SuZIE-III lenses collimator/camera, banspass filter
 raster y is E-field direction
 raster x,y=0,0 is about dx=-0.125" dy=-12" from center of filter
 
-SAMPLE:  613 - Double sided on steinerfilm. New Patterning from Laserod.
-Wrinkles.
+SAMPLE:  613 - Double sided on steinerfilm. New Patterning from Laserod. Wrinkles.
 filter Y = raster -y, filter X= raster -x. Top Side
 
 1mV, 30ms 6dB/octave, 17.572 KHz
 # COLUMNS: time(ms), position number,X (inch), Y (inch), aux2_lockin (V), x_lockin (V), r_lockin (V), theta_lockin (deg), 
 # DATA START
-        106.042,0,0.000000,0.000000,2
-0.00166667,0.000222118,0.000222773,5.07
+        106.042,0,0.000000,0.000000,0.00166667,0.000222118,0.000222773,5.07
         106.142,0,0.000000,0.000000,0.00166667,0.000221998,0.000222714,5.1
         106.242,0,0.000000,0.000000,0.00133333,0.000221879,0.000222922,5.118
         106.342,0,0.000000,0.000000,0.00133333,0.000222058,0.000222863,5.082

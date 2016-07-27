@@ -4,7 +4,6 @@ raster y is E-field direction
 raster x,y=0,0 is about dx=-0.125" dy=-12" from center of filter
 
 SAMPLE:  612 - Double sided on steinerfilm. New Patterning from Laserod.
-.
 filter X = raster -y, filter Y= raster -x. Bottom Side
 
 1mV, 30ms 6dB/octave, 17.572 KHz
