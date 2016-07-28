@@ -45,7 +45,7 @@ if __name__=="__main__":
         print ("Enter the name of the directory to search")
         sys.exit(-1)
     elif len(sys.argv) == 2:
-        top = sys.argv[1] 
+        top = op.join(sys.argv[1], '')
     else:
         sys.exit(-1)
 
