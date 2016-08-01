@@ -159,7 +159,7 @@ def onearmcorrection(datascans, onearmscans):
     N = len(datascans['signal'])
     for i in xrange(N):
         signal = (datascans['signal'][i] - onearmscans['signal-averaged'])
-        signal /= np.sqrt(onearmscans['signal-averaged'])
+        # signal /= np.sqrt(onearmscans['signal-averaged'])
         signal -= np.average(signal)
         signaldriftcorrected += [signal]
     return np.array(signaldriftcorrected)
@@ -193,11 +193,11 @@ def correction(datascans, fitfunction, initialparams, minindex, maxindex):
 def sinccorrection(self, datascans):
     initialparams = []
     if self.fit95:
-        # initialparams = np.array([1.5e-4,40/c,-51.6,1190./c]) # When no sqrt
-        initialparams = np.array([1.4e-2,40/c,-51.6,1190./c])
+        initialparams = np.array([1.5e-4,40/c,-51.6,1190./c]) # When no sqrt
+        # initialparams = np.array([1.4e-2,40/c,-51.6,1190./c])
     else:
-        # initialparams = np.array([1.5e-4,40/c,-51.6,1862.3/c]) # When no sqrt
-        initialparams = np.array([1.4e-2,40/c,-51.6,1862.3/c])
+        initialparams = np.array([1.5e-4,40/c,-51.6,1862.3/c]) # When no sqrt
+        # initialparams = np.array([1.4e-2,40/c,-51.6,1862.3/c])
     minindex = map(lambda x: np.where(x >= 375)[0][0], datascans['encoder-driftcorrected'])
     maxindex = map(lambda x: np.where(x <= 400)[0][-1], datascans['encoder-driftcorrected'])
     # print(minindex, maxindex)
@@ -571,7 +571,7 @@ class FTSscan(object):
         self.ratio_err = self.ratio_avg*np.sqrt(self.nosampledata['relative-error']**2 + \
             self.sampledata['relative-error']**2)
 
-        f = open('sample-1801.txt', 'w')
+        f = open('no-sqrt-1801.txt', 'w')
         f.write('# Frequency Ratio Error\n')
         np.savetxt(f, np.c_[self.frequency[self.thresh], self.ratio_avg, self.ratio_err], delimiter=' ')
 
