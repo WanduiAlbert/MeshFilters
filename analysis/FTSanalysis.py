@@ -11,7 +11,7 @@ import glob
 def scan_analysis(dirpath, etalonlen, frequency):
 
     myscan = fs.FTSscan(dirpath, frequency, etalonlen,useonearm=True,\
-        generateplots=True, useSincFitting=True, numinterppoints=15)
+        generateplots=False, useSincFitting=True, numinterppoints=15)
     myscan.initialize()
     myscan.driftcorrect()
     myscan.peakcorrect()

@@ -171,20 +171,20 @@ def correction(datascans, fitfunction, initialparams, minindex, maxindex):
         x = datascans['encoder-driftcorrected'][i][minindex[i]:maxindex[i]]
         y = datascans['signal-driftcorrected'][i][minindex[i]:maxindex[i]]
         popt, pcov = curve_fit(fitfunction,x,y,p0=initialparams)
-        xnew = np.r_[250:550:1000j]
-        ynew= envelope(xnew,*popt[:-1])
-        yguess = envelope(xnew, *initialparams[:-1])
-        fig, ax = plt.subplots(figsize=(15,10))
-        ax.plot(datascans['encoder-driftcorrected'][i], datascans['signal-driftcorrected'][i], 'b.-')
-        ax.plot(xnew, ynew, 'r-')
-        ax.plot(xnew, yguess, 'k-')
-        ax.grid(which='major', axis='x', linewidth=0.75, linestyle='-', color='0.95')
-        ax.grid(which='minor', axis='x', linewidth=0.25, linestyle='-', color='0.95')
-        ax.grid(which='major', axis='y', linewidth=0.75, linestyle='-', color='0.95')
-        ax.grid(which='minor', axis='y', linewidth=0.25, linestyle='-', color='0.95')
-        ax.axis('tight')
-        plt.savefig(str(i) + '.png')
-        plt.close()
+        # xnew = np.r_[250:550:1000j]
+        # ynew= envelope(xnew,*popt[:-1])
+        # yguess = envelope(xnew, *initialparams[:-1])
+        # fig, ax = plt.subplots(figsize=(15,10))
+        # ax.plot(datascans['encoder-driftcorrected'][i], datascans['signal-driftcorrected'][i], 'b.-')
+        # ax.plot(xnew, ynew, 'r-')
+        # ax.plot(xnew, yguess, 'k-')
+        # ax.grid(which='major', axis='x', linewidth=0.75, linestyle='-', color='0.95')
+        # ax.grid(which='minor', axis='x', linewidth=0.25, linestyle='-', color='0.95')
+        # ax.grid(which='major', axis='y', linewidth=0.75, linestyle='-', color='0.95')
+        # ax.grid(which='minor', axis='y', linewidth=0.25, linestyle='-', color='0.95')
+        # ax.axis('tight')
+        # plt.savefig(str(i) + '.png')
+        # plt.close()
         pcovs += [pcov]
         popts += [popt]
     return popts, pcovs
@@ -196,16 +196,19 @@ def sinccorrection(self, datascans):
     else:
         initialparams = np.array([1.5e-4,40/c,-51.6,1862.3/c])
     minindex = map(lambda x: np.where(x >= 375)[0][0], datascans['encoder-driftcorrected'])
-    maxindex = map(lambda x: np.where(x <= 400)[0][-1], datascans['encoder-driftcorrected'])
+    maxindex = map(lambda x: np.where(x <= 415)[0][-1], datascans['encoder-driftcorrected'])
     # print(minindex, maxindex)
     # print (datascans['encoder'][0][minindex[0]])
-    popts,pcovs = correction(datascans, sincfit, initialparams, minindex, maxindex)
+
+    popts, pcovs = correction(datascans, sincfit, initialparams, minindex, maxindex)
     encoderpeaks = np.array(map(lambda x:-x[2]/x[1], popts))[:,np.newaxis]
-    relerr = np.array(map(lambda x, y: ((x[2]/y[2])**2 + (x[1]/y[1])**2)**0.5, pcovs, popts))[:,np.newaxis]
+    relerr = np.array(map(lambda sigx, x: (sigx[2,2]/(x[2]**2) +
+        sigx[1,1]/(x[1])**2 - 2*sigx[2,1]/(x[1]*x[2]))**0.5, pcovs, popts))[:,np.newaxis]
     encoderpeakerr = encoderpeaks*relerr
+    print("\n")
     for i in xrange(len(encoderpeaks)):
-        print("for the scan {0:d} the position\
-            of zero p.d is {1:1.6f} +/- {2:1.6f}".format(i, encoderpeaks[i], encoderpeakerr[i]))
+        print("for the scan {0:d} the position ".format(i)+\
+            "of zero p.d is {0:1.6f} +/- {1:1.6f}".format(encoderpeaks[i,0], encoderpeakerr[i,0]))
     return (datascans['encoder-driftcorrected'] - encoderpeaks)*(2/c)
 
 def quadcorrection(datascans):
@@ -214,7 +217,8 @@ def quadcorrection(datascans):
     maxindex = peaks + 2
     popts, pcovs = correction(datascans, quadraticfit, [1,1,1], minindex, maxindex)
     encoderpeaks = np.array(map(lambda x:-x[1]/(2*x[0]), popts))[:,np.newaxis]
-    relerr = np.array(map(lambda x, y: ((x[1]/y[1])**2 + (x[0]/y[0])**2)**0.5, pcovs, popts))[:,np.newaxis]
+    relerr = np.array(map(lambda sigx, x: ((sigx[1]/x[1])**2 + (sigx[0]/x[0])**2\
+        - 2*sigx[1,0]/(x[1]*x[0]))**0.5, pcovs, popts))[:,np.newaxis]
     encoderpeakerr = encoderpeaks*relerr
     for i in xrange(len(encoderpeaks)):
         print("for the scan {0:d} the position\
