@@ -8,12 +8,9 @@ import os
 import sh
 import glob
 
-datadir='../FTS data/15-02-5 150GHz Xpol/'
-etalonlen = 3.25*25.4
+def scan_analysis(dirpath, etalonlen, frequency):
 
-def scan_analysis(dirpath, etalonlen, frequency, skiprows):
-
-    myscan = fs.FTSscan(dirpath, frequency, etalonlen,skiprows=skiprows,\
+    myscan = fs.FTSscan(dirpath, frequency, etalonlen,useonearm=True,\
         generateplots=True, useSincFitting=True, numinterppoints=15)
     myscan.initialize()
     myscan.driftcorrect()
@@ -30,22 +27,19 @@ def scan_analysis(dirpath, etalonlen, frequency, skiprows):
 if __name__=='__main__':
     topdir = '../FTS data/'
     plotdir = 'plots/'
-    scandirs = ['15-02-5 95GHz Ypol']
-    skiprows = [24]
-    freqs = [95]
+    scandirs = ['18-01-2 150GHz Xpol'] 
+    freqs = [150]
     etalonlen = 3.25*25.4
 
     for i, scandir in enumerate(scandirs):
         print ("\nWorking on the scans {0}\n".format(scandir))
         dirpath = op.join(topdir, scandir, '')
         plotpath = op.join(plotdir,scandir, '')
-        scan_analysis(dirpath, etalonlen, freqs[i], skiprows[i])
+        scan_analysis(dirpath, etalonlen, freqs[i])
 
         print("\nAnalysis done. Moving all the plots to {0}\n".format(plotpath))
         if not op.isdir(plotpath):
             os.mkdir(plotpath)
-        allplots = glob.glob('*.png')
-        for plot in allplots:
-            sh.mv("-f", plot, plotpath)
+        sh.mv("-f", sh.glob('*.png'), plotpath)
 
         

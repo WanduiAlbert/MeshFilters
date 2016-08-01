@@ -16,6 +16,7 @@ import emcee
 import corner
 import h5py
 import scantypeenumerator as scantyper
+from scipy.integrate import simps
 
 elength = 0
 # Fit functions for the interferogram peak
@@ -74,8 +75,6 @@ def errorcheck(**kwargs):
         raise TypeError("The argument frequency must be a numerical value.")
     if (type(kwargs['etalonlength']) is not int and type(kwargs['etalonlength']) is not float):
         raise TypeError("The argument frequency must be a numerical value.")
-    if (type(kwargs['skiprows']) is not int):
-        raise TypeError("The argument skiprows must be an integer value.")
     if (type(kwargs['useonearm']) is not bool):
         raise TypeError("The argument useonearm must be True or False")
     if (type(kwargs['generateplots']) is not bool):
@@ -87,12 +86,21 @@ def get_save_names(dirname):
     save_name_list = op.basename(op.dirname(dirname)).split(' ')
     return '_'.join(save_name_list), '/' + '/'.join(save_name_list)
 
+def skipstart(filepath):
+    f = open(filepath, 'r')
+    while True:
+        line = f.readline().strip()
+        if (line == '# DATA'):
+            break
+    return f
+
 def loaddataset(self,filelist):
     ssignal = []
     sencoder = []
-    for i, f in enumerate(filelist):
+    for i, filepath in enumerate(filelist):
+        f = skipstart(filepath)
         index, time, encoder, signal = np.loadtxt(f, comments='#',\
-         skiprows=self.skiprows, unpack=True)
+            unpack=True)
         ssignal += [signal]
         sencoder += [encoder]
     print("All {0} files have been loaded".format(len(filelist)))
@@ -138,7 +146,7 @@ def convolutioncorrection(datascans, Nmask):
     # thresh = np.logical_and(indices >= Nmask-1, indices <= N - (Nmask-1))
     for i in xrange(N):
         signal = datascans['signal'][i]
-        conv = np.convolve(datascans['signal'][i], mask, 'full')/Nmask
+        conv = np.convolve(signal, mask, 'full')/Nmask
         # Region of full overlap where boundary effects are not visible
         signal = signal[startindex/2:endindex/2] - conv[startindex:endindex]
         signal -= np.average(signal)
@@ -148,7 +156,6 @@ def convolutioncorrection(datascans, Nmask):
 
 def onearmcorrection(datascans, onearmscans):
     signaldriftcorrected = []
-    encoderdriftcorrected = []
     N = len(datascans['signal'])
     for i in xrange(N):
         signal = (datascans['signal'][i] - onearmscans['signal-averaged'])
@@ -170,7 +177,13 @@ def correction(datascans, fitfunction, initialparams, minindex, maxindex):
         ax.plot(datascans['encoder-driftcorrected'][i], datascans['signal-driftcorrected'][i], 'b.-')
         ax.plot(xnew, ynew, 'r-')
         ax.plot(xnew, yguess, 'k-')
+        ax.grid(which='major', axis='x', linewidth=0.75, linestyle='-', color='0.95')
+        ax.grid(which='minor', axis='x', linewidth=0.25, linestyle='-', color='0.95')
+        ax.grid(which='major', axis='y', linewidth=0.75, linestyle='-', color='0.95')
+        ax.grid(which='minor', axis='y', linewidth=0.25, linestyle='-', color='0.95')
+        ax.axis('tight')
         plt.savefig(str(i) + '.png')
+        plt.close()
         popts += [popt]
     return popts
 
@@ -180,8 +193,8 @@ def sinccorrection(self, datascans):
         initialparams = np.array([1.5e-4,40/c,-51.6,1190./c])
     else:
         initialparams = np.array([1.5e-4,40/c,-51.6,1862.3/c])
-    minindex = map(lambda x: np.where(x >= 375)[0][0], datascans['encoder'])
-    maxindex = map(lambda x: np.where(x <= 400)[0][-1], datascans['encoder'])
+    minindex = map(lambda x: np.where(x >= 375)[0][0], datascans['encoder-driftcorrected'])
+    maxindex = map(lambda x: np.where(x <= 415)[0][-1], datascans['encoder-driftcorrected'])
     # print(minindex, maxindex)
     # print (datascans['encoder'][0][minindex[0]])
     popts = correction(datascans, sincfit, initialparams, minindex, maxindex)
@@ -241,13 +254,16 @@ def validateguess(rawguess):
         print ('The guesses supplied must be numerical values')
         return None
 
+def getpower(y, x):
+    return simps(y=y**2, x=x, even='avg', axis=1)
+
 def obtainguess():
     guesses = [
 
     ]
     while (True):
         try:
-            rawguess = raw_input("Enter an updated guess in the format R, L, C, T ").split(',')
+            rawguess = raw_input("\nEnter an updated guess in the format R, T, L, C: ").split(',')
             guesses = validateguess(rawguess)
             if guesses is not None: break
         except EOFError:
@@ -273,9 +289,9 @@ def savedataset(hdf5file, data, key):
         hdf5file.create_dataset(key, data= np.array(data))
 
 class FTSscan(object):
-    def __init__(self, datadir, frequency, etalonlength, skiprows=0,\
-     useonearm=True, generateplots=False,\
-     useSincFitting=True, numinterppoints=15):
+    def __init__(self, datadir, frequency, etalonlength,\
+        useonearm=True, generateplots=False,\
+        useSincFitting=True, numinterppoints=15):
         """
 
         """
@@ -289,7 +305,6 @@ class FTSscan(object):
         self.frequency = frequency
         self.plt_savename, self.hdf5_name = get_save_names(datadir)
         self.useonearm = useonearm
-        self.skiprows = skiprows
         global elength
         self.etalonlength = etalonlength
         elength = self.etalonlength # Wierd global!!!
@@ -319,6 +334,11 @@ class FTSscan(object):
             self.nosampleonearmls = []
         self.samplesls = scantyper.getsamplescans(datadir)
         self.nosamplesls = scantyper.getnosamplescans(datadir)
+
+        print ("SAMPLE - ONE ARM SCANS: {0}".format(self.sampleonearmls))
+        print ("NO SAMPLE - ONE ARM SCANS: {0}".format(self.nosampleonearmls))
+        print ("SAMPLE: {0}".format(self.samplesls))
+        print ("NO SAMPLE: {0}".format(self.nosamplesls))
 
         self.filelist = glob.glob(self.datadir + '*.txt')
         if (self.filelist is []):
@@ -392,8 +412,9 @@ class FTSscan(object):
              self.nosampledata['signal-driftcorrected'], tag='no-sample', **pltparams)
             makeplots(self, self.sampledata['encoder-driftcorrected'],\
              self.sampledata['signal-driftcorrected'], tag='sample', **pltparams)
-            print ("All the plots of the raw data have been completed ")
+            print ("All the plots of the drift corrected interferograms have been completed ")
         self.driftcorrected = True
+
         print ("Drift in source successfully corrected for")
 
     def peakcorrect(self):
@@ -405,7 +426,19 @@ class FTSscan(object):
         else:
             self.sampledata['encoder-driftcorrected'] = quadcorrection(self.sampledata)
             self.nosampledata['encoder-driftcorrected'] = quadcorrection(self.nosampledata)
-        plt.close()
+
+        print ("\nChecking for the power in the sample vs no sample:\n")
+        y = self.sampledata['signal-driftcorrected']
+        x = self.sampledata['encoder-driftcorrected']
+        self.sampledata['power'] = getpower(y,x)
+
+        y = self.nosampledata['signal-driftcorrected']
+        x = self.nosampledata['encoder-driftcorrected']
+        self.nosampledata['power'] = getpower(y,x)
+
+        print ("For sample: Average Power is {0}\n".format(np.average(self.sampledata['power'])))
+        print ("For no sample: Average Power is {0}\n".format(np.average(self.nosampledata['power'])))
+
         if self.generateplots:
             pltparams = {'x-label':r'Path Difference [ns]',\
              'y-label':r'', 'plt-type':'peakcorrected-interferogram' }
@@ -414,7 +447,7 @@ class FTSscan(object):
              self.nosampledata['signal-driftcorrected'], tag='no-sample', **pltparams)
             makeplots(self, self.sampledata['encoder-driftcorrected'],\
              self.sampledata['signal-driftcorrected'], tag='sample', **pltparams)
-            print ("All the plots of the raw data have been completed ")
+            print ("All the plots of the peak corrected interferograms have been completed ")
         self.peakcorrected= True
 
     def symmetrize(self):
@@ -435,7 +468,7 @@ class FTSscan(object):
              self.nosampledata['signal-resampled'], tag='no-sample', **pltparams)
             makeplots(self, [self.encoder_resampled]*len(self.sampledata['signal']),\
              self.sampledata['signal-resampled'], tag='sample', **pltparams)
-            print ("All the plots of the raw data have been completed ")
+            print ("All the plots of the symmetrized interferograms have been completed ")
         self.symmetrized = True
 
     def getFFTs(self):
@@ -454,6 +487,23 @@ class FTSscan(object):
         #sample case
         self.nosampledata['freq-interest'], self.nosampledata['fft-interest'] = getthresh(self, self.nosampledata)
         self.sampledata['freq-interest'], self.sampledata['fft-interest'] = getthresh(self, self.sampledata)
+
+        x = self.frequency
+        self.sampledata['fft-power'] = getpower(np.imag(self.sampledata['signal-fft']), x)
+        self.nosampledata['fft-power'] = getpower(np.imag(self.nosampledata['signal-fft']), x)
+
+        x = self.frequency[self.thresh]
+        self.sampledata['fft-power-interest'] = getpower(np.imag(self.sampledata['fft-interest']), x)
+        self.nosampledata['fft-power-interest'] = getpower(np.imag(self.nosampledata['fft-interest']), x)
+        
+        print ("For sample: Average Power is {0} over all frequencies.\n".\
+            format(np.average(self.sampledata['fft-power'])))
+        print ("For no sample: Average Power is {0} over all frequencies.\n".\
+            format(np.average(self.nosampledata['fft-power'])))
+        print ("For sample: Average Power is {0} over our freq band.\n".\
+            format(np.average(self.sampledata['fft-power-interest'])))
+        print ("For no sample: Average Power is {0} over our freq band.\n".\
+            format(np.average(self.nosampledata['fft-power-interest'])))
 
         if self.generateplots:
             
@@ -509,6 +559,10 @@ class FTSscan(object):
         self.ratio_avg= self.sampledata['fft-averaged']/self.nosampledata['fft-averaged']
         self.ratio_err = self.ratio_avg*np.sqrt(self.nosampledata['relative-error']**2 + \
             self.sampledata['relative-error']**2)
+
+        f = open('sample-1801.txt', 'w')
+        f.write('# Frequency Ratio Error\n')
+        np.savetxt(f, np.c_[self.frequency[self.thresh], self.ratio_avg, self.ratio_err], delimiter=' ')
 
         if self.generateplots:
             # Plot the relative error
