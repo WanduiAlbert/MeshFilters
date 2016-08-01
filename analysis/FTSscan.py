@@ -159,6 +159,7 @@ def onearmcorrection(datascans, onearmscans):
     N = len(datascans['signal'])
     for i in xrange(N):
         signal = (datascans['signal'][i] - onearmscans['signal-averaged'])
+        signal /= np.sqrt(onearmscans['signal-averaged'])
         signal -= np.average(signal)
         signaldriftcorrected += [signal]
     return np.array(signaldriftcorrected)
@@ -171,20 +172,20 @@ def correction(datascans, fitfunction, initialparams, minindex, maxindex):
         x = datascans['encoder-driftcorrected'][i][minindex[i]:maxindex[i]]
         y = datascans['signal-driftcorrected'][i][minindex[i]:maxindex[i]]
         popt, pcov = curve_fit(fitfunction,x,y,p0=initialparams)
-        # xnew = np.r_[250:550:1000j]
-        # ynew= envelope(xnew,*popt[:-1])
-        # yguess = envelope(xnew, *initialparams[:-1])
-        # fig, ax = plt.subplots(figsize=(15,10))
-        # ax.plot(datascans['encoder-driftcorrected'][i], datascans['signal-driftcorrected'][i], 'b.-')
-        # ax.plot(xnew, ynew, 'r-')
-        # ax.plot(xnew, yguess, 'k-')
-        # ax.grid(which='major', axis='x', linewidth=0.75, linestyle='-', color='0.95')
-        # ax.grid(which='minor', axis='x', linewidth=0.25, linestyle='-', color='0.95')
-        # ax.grid(which='major', axis='y', linewidth=0.75, linestyle='-', color='0.95')
-        # ax.grid(which='minor', axis='y', linewidth=0.25, linestyle='-', color='0.95')
-        # ax.axis('tight')
-        # plt.savefig(str(i) + '.png')
-        # plt.close()
+        xnew = np.r_[250:550:1000j]
+        ynew= envelope(xnew,*popt[:-1])
+        yguess = envelope(xnew, *initialparams[:-1])
+        fig, ax = plt.subplots(figsize=(15,10))
+        ax.plot(datascans['encoder-driftcorrected'][i], datascans['signal-driftcorrected'][i], 'b.-')
+        ax.plot(xnew, ynew, 'r-')
+        ax.plot(xnew, yguess, 'k-')
+        ax.grid(which='major', axis='x', linewidth=0.75, linestyle='-', color='0.95')
+        ax.grid(which='minor', axis='x', linewidth=0.25, linestyle='-', color='0.95')
+        ax.grid(which='major', axis='y', linewidth=0.75, linestyle='-', color='0.95')
+        ax.grid(which='minor', axis='y', linewidth=0.25, linestyle='-', color='0.95')
+        ax.axis('tight')
+        plt.savefig(str(i) + '.png')
+        plt.close()
         pcovs += [pcov]
         popts += [popt]
     return popts, pcovs
@@ -192,11 +193,13 @@ def correction(datascans, fitfunction, initialparams, minindex, maxindex):
 def sinccorrection(self, datascans):
     initialparams = []
     if self.fit95:
-        initialparams = np.array([1.5e-4,40/c,-51.6,1190./c])
+        # initialparams = np.array([1.5e-4,40/c,-51.6,1190./c]) # When no sqrt
+        initialparams = np.array([1.4e-2,40/c,-51.6,1190./c])
     else:
-        initialparams = np.array([1.5e-4,40/c,-51.6,1862.3/c])
+        # initialparams = np.array([1.5e-4,40/c,-51.6,1862.3/c]) # When no sqrt
+        initialparams = np.array([1.4e-2,40/c,-51.6,1862.3/c])
     minindex = map(lambda x: np.where(x >= 375)[0][0], datascans['encoder-driftcorrected'])
-    maxindex = map(lambda x: np.where(x <= 415)[0][-1], datascans['encoder-driftcorrected'])
+    maxindex = map(lambda x: np.where(x <= 400)[0][-1], datascans['encoder-driftcorrected'])
     # print(minindex, maxindex)
     # print (datascans['encoder'][0][minindex[0]])
 
@@ -409,9 +412,9 @@ class FTSscan(object):
         else:
             Nmask = 401
             self.sampledata['signal-driftcorrected'],\
-             self.sampledata['encoder-driftcorrected'] = convolutioncorrection(self.sampledata, Nmask)
+             self.sampledata['encoder-driftcorrected'] = convolutioncorrection(self.nosampledata, Nmask)
             self.nosampledata['signal-driftcorrected'],\
-             self.nosampledata['encoder-driftcorrected'] = convolutioncorrection(self.nosampledata, Nmask)
+             self.nosampledata['encoder-driftcorrected'] = convolutioncorrection(self.sampledata, Nmask)
         if self.generateplots:
             pltparams = {'x-label':r'Encoder [mm]',\
              'y-label':r'', 'plt-type':'driftcorrected-interferogram' }
