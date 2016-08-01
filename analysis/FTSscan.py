@@ -165,6 +165,7 @@ def onearmcorrection(datascans, onearmscans):
 
 def correction(datascans, fitfunction, initialparams, minindex, maxindex):
     popts = []
+    pcovs = []
     N = len(datascans['signal'])
     for i in xrange(N):
         x = datascans['encoder-driftcorrected'][i][minindex[i]:maxindex[i]]
@@ -184,8 +185,9 @@ def correction(datascans, fitfunction, initialparams, minindex, maxindex):
         ax.axis('tight')
         plt.savefig(str(i) + '.png')
         plt.close()
+        pcovs += [pcov]
         popts += [popt]
-    return popts
+    return popts, pcovs
 
 def sinccorrection(self, datascans):
     initialparams = []
@@ -194,27 +196,29 @@ def sinccorrection(self, datascans):
     else:
         initialparams = np.array([1.5e-4,40/c,-51.6,1862.3/c])
     minindex = map(lambda x: np.where(x >= 375)[0][0], datascans['encoder-driftcorrected'])
-    maxindex = map(lambda x: np.where(x <= 415)[0][-1], datascans['encoder-driftcorrected'])
+    maxindex = map(lambda x: np.where(x <= 400)[0][-1], datascans['encoder-driftcorrected'])
     # print(minindex, maxindex)
     # print (datascans['encoder'][0][minindex[0]])
-    popts = correction(datascans, sincfit, initialparams, minindex, maxindex)
-    for i, popt in enumerate(popts):
-        print("for the scan {0:d} the position\
-         of zero p.d is {1:1.6f}".format(i, -popt[2]/popt[1]))
+    popts,pcovs = correction(datascans, sincfit, initialparams, minindex, maxindex)
     encoderpeaks = np.array(map(lambda x:-x[2]/x[1], popts))[:,np.newaxis]
-    print (encoderpeaks.shape)
+    relerr = np.array(map(lambda x, y: ((x[2]/y[2])**2 + (x[1]/y[1])**2)**0.5, pcovs, popts))[:,np.newaxis]
+    encoderpeakerr = encoderpeaks*relerr
+    for i in xrange(len(encoderpeaks)):
+        print("for the scan {0:d} the position\
+            of zero p.d is {1:1.6f} +/- {2:1.6f}".format(i, encoderpeaks[i], encoderpeakerr[i]))
     return (datascans['encoder-driftcorrected'] - encoderpeaks)*(2/c)
 
 def quadcorrection(datascans):
     peaks = np.argmax(datascans['signal-driftcorrected'], axis=1)
     minindex = peaks - 1
     maxindex = peaks + 2
-    popts = correction(datascans, quadraticfit, [1,1,1], minindex, maxindex)
-    for i, popt in enumerate(popts):
-        print("for the scan {0:d} the position\
-         of zero p.d is {1:1.6f}".format(i, -popt[1]/(2*popt[0])))
+    popts, pcovs = correction(datascans, quadraticfit, [1,1,1], minindex, maxindex)
     encoderpeaks = np.array(map(lambda x:-x[1]/(2*x[0]), popts))[:,np.newaxis]
-    print (encoderpeaks.shape)
+    relerr = np.array(map(lambda x, y: ((x[1]/y[1])**2 + (x[0]/y[0])**2)**0.5, pcovs, popts))[:,np.newaxis]
+    encoderpeakerr = encoderpeaks*relerr
+    for i in xrange(len(encoderpeaks)):
+        print("for the scan {0:d} the position\
+            of zero p.d is {1:1.6f} +/- {2:1.6f}".format(i, encoderpeaks[i], encoderpeakerr[i]))
     return (datascans['encoder-driftcorrected'] - encoderpeaks)*(2/c)
 
 def resamplesig(datascans, x_new):
