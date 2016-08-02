@@ -172,20 +172,20 @@ def correction(datascans, fitfunction, initialparams, minindex, maxindex):
         x = datascans['encoder-driftcorrected'][i][minindex[i]:maxindex[i]]
         y = datascans['signal-driftcorrected'][i][minindex[i]:maxindex[i]]
         popt, pcov = curve_fit(fitfunction,x,y,p0=initialparams)
-        xnew = np.r_[250:550:1000j]
-        ynew= envelope(xnew,*popt[:-1])
-        yguess = envelope(xnew, *initialparams[:-1])
-        fig, ax = plt.subplots(figsize=(15,10))
-        ax.plot(datascans['encoder-driftcorrected'][i], datascans['signal-driftcorrected'][i], 'b.-')
-        ax.plot(xnew, ynew, 'r-')
-        ax.plot(xnew, yguess, 'k-')
-        ax.grid(which='major', axis='x', linewidth=0.75, linestyle='-', color='0.95')
-        ax.grid(which='minor', axis='x', linewidth=0.25, linestyle='-', color='0.95')
-        ax.grid(which='major', axis='y', linewidth=0.75, linestyle='-', color='0.95')
-        ax.grid(which='minor', axis='y', linewidth=0.25, linestyle='-', color='0.95')
-        ax.axis('tight')
-        plt.savefig(str(i) + '.png')
-        plt.close()
+        # xnew = np.r_[250:550:1000j]
+        # ynew= envelope(xnew,*popt[:-1])
+        # yguess = envelope(xnew, *initialparams[:-1])
+        # fig, ax = plt.subplots(figsize=(15,10))
+        # ax.plot(datascans['encoder-driftcorrected'][i], datascans['signal-driftcorrected'][i], 'b.-')
+        # ax.plot(xnew, ynew, 'r-')
+        # ax.plot(xnew, yguess, 'k-')
+        # ax.grid(which='major', axis='x', linewidth=0.75, linestyle='-', color='0.95')
+        # ax.grid(which='minor', axis='x', linewidth=0.25, linestyle='-', color='0.95')
+        # ax.grid(which='major', axis='y', linewidth=0.75, linestyle='-', color='0.95')
+        # ax.grid(which='minor', axis='y', linewidth=0.25, linestyle='-', color='0.95')
+        # ax.axis('tight')
+        # plt.savefig(str(i) + '.png')
+        # plt.close()
         pcovs += [pcov]
         popts += [popt]
     return popts, pcovs
@@ -204,14 +204,38 @@ def sinccorrection(self, datascans):
     # print (datascans['encoder'][0][minindex[0]])
 
     popts, pcovs = correction(datascans, sincfit, initialparams, minindex, maxindex)
-    encoderpeaks = np.array(map(lambda x:-x[2]/x[1], popts))[:,np.newaxis]
+    signalpeaks = np.array(map(lambda x: sincfit(-x[2]/x[1], *x), popts))
+    cosineshift = np.array(map(lambda x: np.cos((-x[2]/x[1])*x[-1]), popts))
+    phaseshift = np.round(map(lambda x: ((-x[2]/x[1])*x[-1])/(np.pi), popts))
+    encoderpeaks = np.array(map(lambda x, N: np.pi/x[-1]*N, popts, phaseshift))[:,np.newaxis]
+
+    self.signalpeaks = signalpeaks
+    # encoderpeaks = np.array(map(lambda x:-x[2]/x[1], popts))[:,np.newaxis]
     relerr = np.array(map(lambda sigx, x: (sigx[2,2]/(x[2]**2) +
         sigx[1,1]/(x[1])**2 - 2*sigx[2,1]/(x[1]*x[2]))**0.5, pcovs, popts))[:,np.newaxis]
     encoderpeakerr = encoderpeaks*relerr
     print("\n")
     for i in xrange(len(encoderpeaks)):
+        # print ("The cos at zero pd is {0:1.5f} with a phase shift {1:1.5f}".format(cosineshift[i], phaseshift[i]))
         print("for the scan {0:d} the position ".format(i)+\
             "of zero p.d is {0:1.6f} +/- {1:1.6f}".format(encoderpeaks[i,0], encoderpeakerr[i,0]))
+
+    # for i in xrange(len(encoderpeaks)):
+    #     xnew = np.r_[375:400:1000j]
+    #     ynew= sincfit(xnew,*popts[i])
+    #     # yguess = envelope(xnew, *initialparams[:-1])
+    #     fig, ax = plt.subplots(figsize=(15,10))
+    #     ax.plot(datascans['encoder-driftcorrected'][i][minindex[i]:maxindex[i]] - encoderpeaks[i],\
+    #         datascans['signal-driftcorrected'][i][minindex[i]:maxindex[i]], 'b.-')
+    #     ax.plot(xnew - encoderpeaks[i], ynew, 'r-')
+    #     # ax.plot(xnew, yguess, 'k-')
+    #     ax.grid(which='major', axis='x', linewidth=0.75, linestyle='-', color='0.00')
+    #     ax.grid(which='minor', axis='x', linewidth=0.25, linestyle='-', color='0.00')
+    #     ax.grid(which='major', axis='y', linewidth=0.75, linestyle='-', color='0.00')
+    #     ax.grid(which='minor', axis='y', linewidth=0.25, linestyle='-', color='0.00')
+    #     ax.axis('tight')
+    #     plt.savefig(str(i) + '.png')
+    #     plt.close()
     return (datascans['encoder-driftcorrected'] - encoderpeaks)*(2/c)
 
 def quadcorrection(datascans):
@@ -266,7 +290,7 @@ def validateguess(rawguess):
         return None
 
 def getpower(y, x):
-    return simps(y=y**2, x=x, even='avg', axis=1)
+    return simps(y**2, x=x, even='avg', axis=1)
 
 def obtainguess():
     guesses = [
@@ -471,14 +495,33 @@ class FTSscan(object):
         self.encoder_resampled= encoder_new[:-1]
         self.sampledata["signal-resampled"] = resamplesig(self.sampledata, self.encoder_resampled)
         self.nosampledata["signal-resampled"] = resamplesig(self.nosampledata, self.encoder_resampled)
+        geteven = lambda x: 0.5*(x[1:] + x[::-1][:-1])
+        getodd = lambda x: 0.5*(x[1:] - x[::-1][:-1])
+
+        # # Print out the value at the peak both before and after resampling
+        # for i in xrange(len(self.sampledata['signal'])):
+        #     print ("\nBefore resampling, the peak value was {0:1.9f}".format(self.signalpeaks[i]))
+        #     print ("After resampling,"+\
+        #         " the peak value was {0:1.9f}\n".format(self.sampledata['signal-resampled'][i][2**(n-1)]))
+
         if self.generateplots:
-            pltparams = {'x-label':r'Path Difference [ns]',\
-             'y-label':r'Signal', 'plt-type':'resampled-interferogram' }
-            print ("Starting to make plots of the resampled interferograms")
-            makeplots(self, [self.encoder_resampled]*len(self.nosampledata['signal']),\
-             self.nosampledata['signal-resampled'], tag='no-sample', **pltparams)
-            makeplots(self, [self.encoder_resampled]*len(self.sampledata['signal']),\
-             self.sampledata['signal-resampled'], tag='sample', **pltparams)
+            fig, ax = plt.subplots(figsize=(15,10))
+            ax.plot(self.encoder_resampled[1:],\
+                geteven(self.nosampledata['signal-resampled'][0]),\
+                'r-', label='Even')
+            ax.plot(self.encoder_resampled[1:],\
+                getodd(self.nosampledata['signal-resampled'][0]),\
+                'b-', label='Odd')
+            ax.legend(loc='best')
+            plt.savefig('sampledata_evenodd.png')
+
+            # pltparams = {'x-label':r'Path Difference [ns]',\
+            #  'y-label':r'Signal', 'plt-type':'resampled-interferogram' }
+            # print ("Starting to make plots of the resampled interferograms")
+            # makeplots(self, [self.encoder_resampled]*len(self.nosampledata['signal']),\
+            #  self.nosampledata['signal-resampled'], tag='no-sample', **pltparams)
+            # makeplots(self, [self.encoder_resampled]*len(self.sampledata['signal']),\
+            #  self.sampledata['signal-resampled'], tag='sample', **pltparams)
             print ("All the plots of the symmetrized interferograms have been completed ")
         self.symmetrized = True
 
@@ -500,12 +543,12 @@ class FTSscan(object):
         self.sampledata['freq-interest'], self.sampledata['fft-interest'] = getthresh(self, self.sampledata)
 
         x = self.frequency
-        self.sampledata['fft-power'] = getpower(np.imag(self.sampledata['signal-fft']), x)
-        self.nosampledata['fft-power'] = getpower(np.imag(self.nosampledata['signal-fft']), x)
+        self.sampledata['fft-power'] = getpower(np.real(self.sampledata['signal-fft']), x)
+        self.nosampledata['fft-power'] = getpower(np.real(self.nosampledata['signal-fft']), x)
 
         x = self.frequency[self.thresh]
-        self.sampledata['fft-power-interest'] = getpower(np.imag(self.sampledata['fft-interest']), x)
-        self.nosampledata['fft-power-interest'] = getpower(np.imag(self.nosampledata['fft-interest']), x)
+        self.sampledata['fft-power-interest'] = getpower(np.real(self.sampledata['fft-interest']), x)
+        self.nosampledata['fft-power-interest'] = getpower(np.real(self.nosampledata['fft-interest']), x)
         
         print ("For sample: Average Power is {0} over all frequencies.\n".\
             format(np.average(self.sampledata['fft-power'])))
@@ -522,11 +565,31 @@ class FTSscan(object):
              'y-label':r'Signal', 'plt-type':'fft' }
             
             print ("Starting to make plots of the fourier transforms")
+            # fig, ax = plt.subplots(figsize=(15,10))
+            # ax.plot(self.sampledata['freq-interest'][0][::4],\
+            #     np.real(self.sampledata['signal-fft'][0][self.thresh][::4]),\
+            #     'r-', label='Real')
+            # ax.plot(self.sampledata['freq-interest'][0][::4],\
+            #     np.abs(np.imag(self.sampledata['signal-fft'][0][self.thresh][::4])),\
+            #     'b-', label='Imag')
+            # ax.legend(loc='best')
+            # plt.savefig('sampledata_realvsimag.png')
+
+            # fig, ax = plt.subplots(figsize=(15,10))
+            # ax.plot(self.nosampledata['freq-interest'][0][::4],\
+            #     np.real(self.nosampledata['signal-fft'][0][self.thresh][::4]),\
+            #     'r-', label='Real')
+            # ax.plot(self.nosampledata['freq-interest'][0][::4],\
+            #     np.abs(np.imag(self.nosampledata['signal-fft'][0][self.thresh][::4])),\
+            #     'b-', label='Imag')
+            # ax.legend()
+            # plt.savefig('nosampledata_realvsimag.png')
+            # plt.close()
             makeplots(self, self.nosampledata['freq-interest'],\
              self.nosampledata['fft-interest'],tag='no-sample', **pltparams)
 
             makeplots(self, self.sampledata['freq-interest'],\
-             self.sampledata['fft-interest'],tag='no-sample', **pltparams)
+             self.sampledata['fft-interest'],tag='sample', **pltparams)
             print ("All the plots of the fourier transforms have been completed ")
         self.transformed = True
 
@@ -571,9 +634,9 @@ class FTSscan(object):
         self.ratio_err = self.ratio_avg*np.sqrt(self.nosampledata['relative-error']**2 + \
             self.sampledata['relative-error']**2)
 
-        f = open('no-sqrt-1801.txt', 'w')
-        f.write('# Frequency Ratio Error\n')
-        np.savetxt(f, np.c_[self.frequency[self.thresh], self.ratio_avg, self.ratio_err], delimiter=' ')
+        # f = open('no-sqrt-1801.txt', 'w')
+        # f.write('# Frequency Ratio Error\n')
+        # np.savetxt(f, np.c_[self.frequency[self.thresh], self.ratio_avg, self.ratio_err], delimiter=' ')
 
         if self.generateplots:
             # Plot the relative error
@@ -704,7 +767,7 @@ class FTSscan(object):
             ax.set_xlabel('Frequency [GHz]')
             plt.savefig(self.plt_savename +'-' + 'best-fit' + '.png')
             plt.close()
-            print ("All done!")
+            print ("Fitting of the parameters completed. Moving to calculating the errorbars!")
         self.fitted = True
 
     def obtainerrorbars(self):
@@ -720,34 +783,40 @@ class FTSscan(object):
         sampler.run_mcmc(pos, nsteps);
 
         if self.generateplots:
-            print ("\nGenerating plots of the movement of walkers")
-            # Show the movement of the walkers in paramspace
-            for j in xrange(ndim):
-                fig,ax = plt.subplots(figsize=(15,10))
-                for i in xrange(nwalkers):
-                    if i is 0:
-                        ax.plot(sampler.chain[i,:,j], 'k', label='Simulated Fit')
-                    ax.plot(sampler.chain[i,:,j], 'k')
-                __, __, ymin, ymax = ax.axis()
-                ax.vlines(200, ymin,ymax,color=u'r')
-                ax.axis('tight')
-                ax.grid(which='both');
-                ax.set_ylabel(labels[j])
-                ax.set_xlabel(r'Number of steps')
-                plt.savefig(self.plt_savename + '{0}'.format(labels[j]) + '-walkers-plot.png')
-                plt.close()
+            try:
+                print ("\nGenerating plots of the movement of walkers")
+                # Show the movement of the walkers in paramspace
+                for j in xrange(ndim):
+                    fig,ax = plt.subplots(figsize=(15,10))
+                    for i in xrange(nwalkers):
+                        if i is 0:
+                            ax.plot(sampler.chain[i,:,j], 'k', label='Simulated Fit')
+                        ax.plot(sampler.chain[i,:,j], 'k')
+                    __, __, ymin, ymax = ax.axis()
+                    ax.vlines(200, ymin,ymax,color=u'r')
+                    ax.axis('tight')
+                    ax.grid(which='both');
+                    ax.set_ylabel(labels[j])
+                    ax.set_xlabel(r'Number of steps')
+                    plt.savefig(self.plt_savename + '{0}'.format(labels[j]) + '-walkers-plot.png')
+                    plt.close()
+            except RuntimeError:
+                print ("Plot wasn't generated. Continuing")
 
         samples = sampler.chain[:, 200:, :].reshape((-1, ndim))
 
         if self.generateplots:
             print ("Generating a corner plot displaying the results")
-            # Make a corner plot of the results
-            figure, ax = plt.subplots(nrows = ndim, ncols=ndim, figsize=(15,12))
-            fig = corner.corner(samples, title_fmt='.4f',labels=["$R$", "$T$", "$L$", "$C$"],\
-                truths=self.params, quantiles=[.16, .50, .84],\
-                fig=figure,show_titles=True, use_math_text=True)
-            fig.savefig(self.plt_savename + 'corner_plot.png')
-            plt.close()
+            try:
+                # Make a corner plot of the results
+                figure, ax = plt.subplots(nrows = ndim, ncols=ndim, figsize=(15,12))
+                fig = corner.corner(samples, title_fmt='.4f',labels=["$R$", "$T$", "$L$", "$C$"],\
+                    truths=self.params, quantiles=[.16, .50, .84],\
+                    fig=figure,show_titles=True, use_math_text=True)
+                fig.savefig(self.plt_savename + 'corner_plot.png')
+                plt.close()
+            except RuntimeError:
+                print ("Plot wasn't generated. Continuing")
 
         self.R_mcmc, self.T_mcmc, self.L_mcmc, self.C_mcmc =\
         map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),\
@@ -766,21 +835,24 @@ class FTSscan(object):
         if self.generateplots:
             print ("Plotting the results in projected space")
             # Plot the results in projected space
-            fig,ax = plt.subplots(figsize=(15,10))
-            for opt in samples[np.random.randint(len(samples), size=200)]:
+            try:
+                fig,ax = plt.subplots(figsize=(15,10))
+                for opt in samples[np.random.randint(len(samples), size=200)]:
+                    ax.plot(self.frequency[self.thresh],\
+                            transmissionModel(self.frequency[self.thresh],*opt), color="k", alpha=0.1)
+                ax.errorbar(self.frequency[self.thresh][::4], self.ratio_avg[::4],\
+                            yerr=self.ratio_err[::4], fmt="b.-",ecolor='b', label='data')
                 ax.plot(self.frequency[self.thresh],\
-                        transmissionModel(self.frequency[self.thresh],*opt), color="k", alpha=0.1)
-            ax.errorbar(self.frequency[self.thresh][::4], self.ratio_avg[::4],\
-                        yerr=self.ratio_err[::4], fmt="b.-",ecolor='b', label='data')
-            ax.plot(self.frequency[self.thresh],\
-                transmissionModel(self.frequency[self.thresh], *self.params),\
-                'r-', label='MLE Fit');
-            ax.axis('tight');
-            ax.legend(loc='best')
-            ax.set_xlabel('Frequency [GHz]')
-            fig.savefig(self.plt_savename + 'projected-space.png')
-            plt.close()
-            print ("All done !")
+                    transmissionModel(self.frequency[self.thresh], *self.params),\
+                    'r-', label='MLE Fit');
+                ax.axis('tight');
+                ax.legend(loc='best')
+                ax.set_xlabel('Frequency [GHz]')
+                fig.savefig(self.plt_savename + 'projected-space.png')
+                plt.close()
+            except RuntimeError:
+                print ("Plot wasn't generated. Continuing")
+            print ("All done with finding the errorbars! Saving the data now")
 
     def savedata(self):
         filename = 'mesh_filters.hdf5'
