@@ -132,8 +132,12 @@ patch.antialiased      : True    # render patches in antialised (no jaggies)
 # The font.size property is the default font size for text, given in pts.
 # 12pt is the standard value.
 #
-font.family         : serif #arial
-font.serif          : Computer Modern Roman
+#font.family         : serif #arial
+#font.serif          : Computer Modern Roman
+#font.sans-serif     : Computer Modern Sans Serif
+
+font.family         : monospace #arial
+font.serif          : Courier
 font.sans-serif     : Computer Modern Sans Serif
 font.style          : normal
 font.variant        : normal
