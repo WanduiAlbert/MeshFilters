@@ -7,10 +7,10 @@ import glob
 import sys
 import re
 
-sample_pattern = re.compile(r'^#( *)SAMPLE\s*$')
-nosample_pattern = re.compile(r'^#\s*NO\s*SAMPLE\s*$')
-sampleonearm_pattern = re.compile(r'^#( *)SAMPLE( *)?(-+)( *)?ONE')
-nosampleonearm_pattern = re.compile(r'^#( *)*NO\s*SAMPLE( *)?(-+)( *)?ONE')
+sample_pattern = re.compile(r'^#(\s*)SAMPLE\s*$')
+nosample_pattern = re.compile(r'^#\s*NO\s*SAMPLE(\s*)$')
+sampleonearm_pattern = re.compile(r'^#(\s*)SAMPLE(\s*)?(-+)( *)?ONE')
+nosampleonearm_pattern = re.compile(r'^#(\s*)*NO\s*SAMPLE(\s*)?(-+)(\s*)?ONE')
     
 def loadfirstline(filepath):
     # Read in only the first line

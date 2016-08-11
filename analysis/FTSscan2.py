@@ -19,9 +19,14 @@ import scantypeenumerator as scantyper
 from scipy.integrate import simps
 
 elength = 0
+bandcenter = 0
+
 # Fit functions for the interferogram peak
 def quadraticfit(x, A, B, C):
     return A*x**2 + B*x + C
+
+def getR(nu, R0, dR, dR2):
+    return R0 + (nu - bandcenter) *dR + (nu - bandcenter)**2*dR2
 
 def sincfit(x, A, B, C, D):
     return A*(np.sinc(B*x+C))*np.cos(D*x)
@@ -30,8 +35,8 @@ def envelope(x, A, B, C):
     return A*(np.sinc(B*x+C)) 
 
 # Functions for fitting for the parameters
-def transmissionModel(nu, R0, dR, T, L, C):
-    R = R0 + nu*dR # Linear model for R
+def transmissionModel(nu, R0, dR, dR2, T, L, C):
+    R = R0 + (nu - bandcenter) *dR + (nu - bandcenter)**2*dR2 # Quad model for R
     A = (T/(1-R))**2
     F = 4*R/(1-R)**2
     B = 2*2*np.pi/c*L*elength
@@ -53,9 +58,9 @@ nll = lambda *args: -lnlike(*args) #Negative Log Likelihood
 
 def lnprior(theta):
     R0, dR, T, L, C = theta
-    if (-1.0 < R0 < 1.0 and
+    if (-0.15 < R0 < 1.0 and
         0.0 < T < 1.0 and
-        0.0 < dR < 1e-2 and
+        1e-4 < dR < 1e-2 and
         # 0.0 < R + T <= 1.0 and 
         0.5 < L < 1.5 and
         -2.0 < C < 2.0) :
@@ -120,7 +125,7 @@ def makeplots(self, Xlist, Ylist, tag, **kwargs):
         ax.set_ylabel(kwargs['y-label'])
         ax.axis('tight')
         ax.set_xticklabels(["{0:3.1f}".format(t) for t in ax.get_xticks()])
-        ax.set_yticklabels(["{0:1.4f}".format(t) for t in ax.get_yticks()])
+        ax.set_yticklabels(["{0:1.6f}".format(t) for t in ax.get_yticks()])
         plt.savefig(self.plt_savename +'-' + tag + '-' + kwargs['plt-type'] + str(i) + '.png')
         plt.close()
 
@@ -290,6 +295,9 @@ def validateguess(rawguess):
     try:
         guesses = [float(i) for i in rawguess]
         print ("The new guesses are {0}".format(guesses))
+        if (len(guesses)) != 6:
+            print ("A guess must be supplied for each of the parameters")
+            return None
         return guesses
     except ValueError:
         print ('The guesses supplied must be numerical values')
@@ -302,7 +310,7 @@ def obtainguess():
     guesses = []
     while (True):
         try:
-            rawguess = raw_input("\nEnter an updated guess in the format R0, dR, T, L, C: ").split(',')
+            rawguess = raw_input("\nEnter an updated guess in the format R0, dR, dR2, T, L, C: ").split(',')
             guesses = validateguess(rawguess)
             if guesses is not None: break
         except EOFError:
@@ -344,13 +352,21 @@ class FTSscan(object):
         if (type(frequency) is float):
             frequency = int(frequency)
         self.fit95 = True if (frequency == 95) else False
+
+        # Another wierd global but bear with me
+        global bandcenter
+        bandcenter = 95.0 if self.fit95 else 150.0
+
         self.datadir = op.join(datadir, '')
         self.frequency = frequency
         self.plt_savename, self.hdf5_name = get_save_names(datadir)
         self.useonearm = useonearm
+
+        # Wierd global!!!
         global elength
         self.etalonlength = etalonlength
-        elength = self.etalonlength # Wierd global!!!
+
+        elength = self.etalonlength 
         self.generateplots = generateplots
         self.useSincFitting = useSincFitting
         self.numinterppoints = numinterppoints
@@ -523,6 +539,7 @@ class FTSscan(object):
                 getodd(self.nosampledata['signal-resampled'][0]),\
                 'b-', label='Odd')
             ax.legend(loc='best')
+            ax.set_xlim([0.006, 0.008])
             plt.savefig('nosampledata_evenodd.png')
 
             fig, ax = plt.subplots(figsize=(15,10))
@@ -533,6 +550,7 @@ class FTSscan(object):
                 getodd(self.sampledata['signal-resampled'][0]),\
                 'b-', label='Odd')
             ax.legend(loc='best')
+            ax.set_xlim([0.006, 0.008])
             plt.savefig('sampledata_evenodd.png')
 
             # pltparams = {'x-label':r'Path Difference [ns]',\
@@ -696,13 +714,14 @@ class FTSscan(object):
         fig, ax = plt.subplots(figsize=(15,10))
         pltparams = {'x-label':r'Frequency [GHz]',\
         'y-label':r'Signal', 'plt-type':'ratios' }
-        R0 = -0.01 #0.02
-        dR = 2e-4
+        R0 = 0.002 #0.02
+        dR = 1e-4
+        dR2 = 1e-4
         L = np.cos(3*np.pi/180)
         C = 1.1
         T = 0.98
 
-        guesses = [R0, dR, T, L, C]
+        guesses = [R0, dR, dR2, T, L, C]
         print ("\nStarting with the initial guesses {0}".format(guesses))
         while (True):
             print ("\nGenerating plot using guesses {0}".format(guesses))
@@ -774,7 +793,8 @@ class FTSscan(object):
         resultstr += "value of {0:4.5f} and a p-value {1:4.5f}".format(self.chisqreduced, self.pval)
         print (result['message'] + resultstr)
 
-        paramstr = " R = {params[0]}, T = {params[1]}, L= {params[2]}, C = {params[3]}".format(params=self.params)
+        paramstr = " R = {params[0]:1.4f} + (nu - {0:1.4g}) x {params[1]:1.4f}, + (nu - {0:1.4f})^2 x {params[2]:1.4f},\
+        \n T = {params[3]:1.4f}, L= {params[4]:1.4f}, C = {params[5]:1.4f}".format(bandcenter, params=self.params)
         print "optimal parameters are:" + paramstr
 
         if self.generateplots:
@@ -794,14 +814,26 @@ class FTSscan(object):
             ax.set_yticklabels(["{0:1.4f}".format(t) for t in ax.get_yticks()])
             plt.savefig(self.plt_savename +'-' + 'best-fit' + '.png')
             plt.close()
+
+            print ("Generating a plot of the reflectance vs frequency")
+            fig, ax = plt.subplots(figsize=(15,10))
+            ax.plot(self.frequency[self.thresh], getR(self.frequency[self.thresh],*self.params[:3]), 'r-');
+            ax.axis('tight');
+            ax.grid(which='major')
+            ax.set_xlabel('Frequency [GHz]')
+            ax.set_ylabel('Reflectance R')
+            ax.set_xticklabels(["{0:3.1f}".format(t) for t in ax.get_xticks()])
+            ax.set_yticklabels(["{0:1.4f}".format(t) for t in ax.get_yticks()])
+            plt.savefig(self.plt_savename +'-' + 'reflectance' + '.png')
+            plt.close()
             print ("Fitting of the parameters completed. Moving to calculating the errorbars!")
         self.fitted = True
 
     def obtainerrorbars(self):
         if not self.fitted:
             raise RuntimeError("The best fit must be computed before the error on the parameters estimated")
-        labels = [r'R', r'T', r'L', r'C']
-        ndim, nwalkers = 4, 500
+        labels = [r'R0',r'dR', r'T', r'L', r'C']
+        ndim, nwalkers = 5, 500
         pos = [self.params + 1e-4*np.random.randn(ndim) for i in range(nwalkers)]
 
         sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(self.frequency[self.thresh],\
@@ -839,7 +871,7 @@ class FTSscan(object):
             try:
                 # Make a corner plot of the results
                 figure, ax = plt.subplots(nrows = ndim, ncols=ndim, figsize=(15,12))
-                fig = corner.corner(samples, title_fmt='.4f',labels=["$R$", "$T$", "$L$", "$C$"],\
+                fig = corner.corner(samples, title_fmt='.4f',labels=["$R_0$", "$\DeltaR$", "$T$", "$L$", "$C$"],\
                     truths=self.params, quantiles=[.16, .50, .84],\
                     fig=figure,show_titles=True, use_math_text=True)
                 fig.savefig(self.plt_savename + 'corner_plot.png')

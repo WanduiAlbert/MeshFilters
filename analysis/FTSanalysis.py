@@ -10,27 +10,29 @@ import glob
 
 def scan_analysis(dirpath, etalonlen, frequency):
 
-    myscan = fs.FTSscan(dirpath, frequency, etalonlen,useonearm=False,\
-        generateplots=True, useSincFitting=True, numinterppoints=15)
+    myscan = fs.FTSscan(dirpath, frequency, etalonlen,useonearm=True,\
+        generateplots=False, useSincFitting=True, numinterppoints=15)
     myscan.initialize()
     myscan.driftcorrect()
     myscan.peakcorrect()
+    myscan.generateplots = True 
     myscan.symmetrize()
-    # myscan.generateplots = True
+    myscan.generateplots = False 
     myscan.getFFTs()
     myscan.averageFFT()
     myscan.getratio()
     # myscan.generateplots = False
     myscan.checkguesses()
+    myscan.generateplots = True 
     myscan.fitparams()
-    myscan.obtainerrorbars()
-    myscan.savedata()
+    # myscan.obtainerrorbars()
+    # myscan.savedata()
 
 if __name__=='__main__':
     topdir = '../FTS data/'
     plotdir = 'plots/'
-    scandirs = ['18-01-2 95GHz Ypol']
-    freqs = [95]
+    scandirs = ['18-01-2 150GHz Xpol']
+    freqs = [150]
     etalonlen = 3.25*25.4#2.625*25.4
 
     for i, scandir in enumerate(scandirs):

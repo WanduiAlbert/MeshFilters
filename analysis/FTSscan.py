@@ -118,7 +118,7 @@ def makeplots(self, Xlist, Ylist, tag, **kwargs):
         ax.set_ylabel(kwargs['y-label'])
         ax.axis('tight')
         ax.set_xticklabels(["{0:3.1f}".format(t) for t in ax.get_xticks()])
-        ax.set_yticklabels(["{0:1.4f}".format(t) for t in ax.get_yticks()])
+        ax.set_yticklabels(["{0:1.6f}".format(t) for t in ax.get_yticks()])
         plt.savefig(self.plt_savename +'-' + tag + '-' + kwargs['plt-type'] + str(i) + '.png')
         plt.close()
 
