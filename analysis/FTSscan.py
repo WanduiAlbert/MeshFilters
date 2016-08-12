@@ -270,12 +270,8 @@ def resamplesig(datascans, x_new):
     return np.array(signew)
 
 def getfft(datascans):
-    N = len(datascans['signal'])
-    ffts = []
-    for i in xrange(N):
-        y = fft((datascans['signal-resampled'][i]))
-        ffts += [y] 
-    return np.array(ffts)
+    ffts = fft(datascans['signal-resampled'], axis=1)
+    return ffts
 
 def getthresh(self, datascans):
     N = len(datascans['signal'])
@@ -326,7 +322,7 @@ def savedataset(hdf5file, data, key):
     try:
         hdf5file[key][...] = data
     except (KeyError, RuntimeError):
-        hdf5file.create_dataset(key, data= data, maxshape=(100, 10000))
+        hdf5file.create_dataset(key, data= data)
     # except TypeError:
     #     del hdf5file[key]
     #     hdf5file.create_dataset(key, data= data, maxshape=(100, 10000))

@@ -213,6 +213,7 @@ def sinccorrection(self, datascans):
     # print (datascans['encoder'][0][minindex[0]])
 
     popts, pcovs = correction(datascans, sincfit, initialparams, minindex, maxindex)
+    print popts
     signalpeaks = np.array(map(lambda x: sincfit(-x[2]/x[1], *x), popts))
     cosineshift = np.array(map(lambda x: np.cos((-x[2]/x[1])*x[-1]), popts))
     phaseshift = np.round(map(lambda x: ((-x[2]/x[1])*x[-1])/(np.pi), popts))
@@ -277,12 +278,8 @@ def resamplesig(datascans, x_new):
     return np.array(signew)
 
 def getfft(datascans):
-    N = len(datascans['signal'])
-    ffts = []
-    for i in xrange(N):
-        y = fft((datascans['signal-resampled'][i]))
-        ffts += [y] 
-    return np.array(ffts)
+    ffts = fft(datascans['signal-resampled'], axis=1)
+    return ffts
 
 def getthresh(self, datascans):
     N = len(datascans['signal'])
@@ -570,11 +567,15 @@ class FTSscan(object):
         self.sampledata['signal-fft'] = getfft(self.sampledata)
         self.nosampledata['signal-fft'] = getfft(self.nosampledata)
         if self.fit95:
-            self.thresh = np.logical_and(self.frequency >= 90,\
-             self.frequency <= 100) #For 95 GHz
+            # self.thresh = np.logical_and(self.frequency >= 90,\
+            #  self.frequency <= 100) #For 95 GHz
+            self.thresh = np.logical_and(self.frequency >= 70,\
+            self.frequency <= 120) #For 95 GHz
         else:
-            self.thresh = np.logical_and(self.frequency >= 140,\
-             self.frequency <= 159)
+            # self.thresh = np.logical_and(self.frequency >= 140,\
+            #  self.frequency <= 159)
+            self.thresh = np.logical_and(self.frequency >= 120,\
+                self.frequency <= 180)
 
         #sample case
         self.nosampledata['freq-interest'], self.nosampledata['fft-interest'] = getthresh(self, self.nosampledata)
@@ -624,10 +625,22 @@ class FTSscan(object):
             # plt.savefig('nosampledata_realvsimag.png')
             # plt.close()
             makeplots(self, self.nosampledata['freq-interest'],\
-             self.nosampledata['fft-interest'],tag='no-sample', **pltparams)
+                self.nosampledata['fft-interest'],tag='no-sample', **pltparams)
 
             makeplots(self, self.sampledata['freq-interest'],\
-             self.sampledata['fft-interest'],tag='sample', **pltparams)
+                self.sampledata['fft-interest'],tag='sample', **pltparams)
+
+            makeplots(self, self.nosampledata['freq-interest'],\
+                np.imag(self.nosampledata['signal-fft'][:, self.thresh]),tag='no-sample-imag', **pltparams)
+
+            makeplots(self, self.sampledata['freq-interest'],\
+                np.imag(self.sampledata['signal-fft'][:, self.thresh]),tag='sample-imag', **pltparams)
+
+            makeplots(self, self.nosampledata['freq-interest'],\
+                np.unwrap(np.angle(self.nosampledata['signal-fft'][:, self.thresh])),tag='no-sample-phase', **pltparams)
+
+            makeplots(self, self.sampledata['freq-interest'],\
+                np.unwrap(np.angle(self.sampledata['signal-fft'][:, self.thresh])),tag='sample-phase', **pltparams)
             print ("All the plots of the fourier transforms have been completed ")
         self.transformed = True
 
