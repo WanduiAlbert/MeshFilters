@@ -31,9 +31,8 @@ def scan_analysis(dirpath, etalonlen, frequency):
 if __name__=='__main__':
     topdir = '../FTS data/'
     plotdir = 'plots/'
-    scandirs = ['18-01 150GHz Xpol', '18-01 150GHz Ypol',\
-    '18-01 95GHz Xpol', '18-01 95GHz Ypol']
-    freqs = [150, 150, 95, 95]
+    scandirs = ['27-01 95GHz Xpol', '27-01 95GHz Ypol']
+    freqs = [95, 95]
     etalonlen = 2.25*25.4#2.625*25.4
 
     for i, scandir in enumerate(scandirs):
