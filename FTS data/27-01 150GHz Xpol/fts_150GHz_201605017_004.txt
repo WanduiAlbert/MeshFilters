@@ -1,4 +1,4 @@
-# NO SAMPLE
+# NO SAMPLE - ONE ARM SCANS
 FTS 150 GHz source w/rectangular feedhorn and 95 GHz diode detector w/ 
 higher gain round feedhorn w/circ-rect waveguide converter
 
