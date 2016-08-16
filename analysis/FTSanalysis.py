@@ -11,22 +11,22 @@ import glob
 def scan_analysis(dirpath, etalonlen, frequency):
 
     myscan = fs.FTSscan(dirpath, frequency, etalonlen,useonearm=False,\
-        generateplots=True, useSincFitting=True, numinterppoints=15)
+        generateplots=False, useSincFitting=True, numinterppoints=15)
     myscan.initialize()
     myscan.driftcorrect()
+    myscan.generateplots = True 
     myscan.peakcorrect()
     myscan.symmetrize()
-    # myscan.generateplots = True 
     myscan.getFFTs()
-    # myscan.generateplots = False 
+    # # myscan.generateplots = False 
     myscan.averageFFT()
     myscan.getratio()
-    # myscan.generateplots = False
-    myscan.checkguesses()
-    # myscan.generateplots = True 
-    myscan.fitparams()
-    myscan.obtainerrorbars()
-    myscan.savedata()
+    # # myscan.generateplots = False
+    # myscan.checkguesses()
+    # # myscan.generateplots = True 
+    # myscan.fitparams()
+    # myscan.obtainerrorbars()
+    # myscan.savedata()
 
 if __name__=='__main__':
     topdir = '../FTS data/'

@@ -26,6 +26,13 @@ def quadraticfit(x, A, B, C):
 def sincfit(x, A, B, C, D):
     return A*(np.sinc(B*x+C))*np.cos(D*x)
 
+def lnsinc(theta, x, y):
+    model = sincfit(x, *theta)
+    return 0.5*np.sum((y - model)**2)
+
+def chisqsinc(theta, x, y):
+    return 2.0*lnsinc(theta,x,y)
+
 def envelope(x, A, B, C):
     return A*(np.sinc(B*x+C)) 
 
@@ -42,7 +49,6 @@ def lnlike(theta, x, y, yerr):
     return -0.5*(np.sum((y-model)**2*inv_sigma2))
 
 def chisq(theta, x, y, yerr):
-    N = len(x)
     return -2.0*lnlike(theta, x, y, yerr)
 
 def pvalue(chisqval, dof):
@@ -113,7 +119,7 @@ def makeplots(self, Xlist, Ylist, tag, **kwargs):
     for i in xrange(N):
         fig, ax = plt.subplots(figsize=(15,10))
         # print len(Xlist[i]), len(Ylist[i]) 
-        ax.plot(Xlist[i], Ylist[i])
+        ax.plot(Xlist[i], Ylist[i], 'b.')
         ax.set_xlabel(kwargs['x-label'])
         ax.set_ylabel(kwargs['y-label'])
         ax.axis('tight')
@@ -130,8 +136,8 @@ def fftplot(self, datascans, tag, **kwargs):
         ax.set_xlabel(kwargs['x-label'])
         ax.set_ylabel(kwargs['y-label'])
         ax.axis('tight')
-    ax.errorbar(self.frequency[self.thresh][::2], datascans['fft-averaged'][::2],\
-        yerr = datascans['fft-error'][::2], label="averaged",fmt='-',\
+    ax.errorbar(self.frequency[self.thresh][::2], datascans['fft-averaged'][self.thresh][::2],\
+        yerr = datascans['fft-error'][self.thresh][::2], label="averaged",fmt='-',\
         ecolor='k', color='k')
     ax.legend(loc='best')
     plt.savefig(self.plt_savename +'-' + tag + '-' + kwargs['plt-type'] + '.png')
@@ -192,6 +198,43 @@ def correction(datascans, fitfunction, initialparams, minindex, maxindex):
         popts += [popt]
     return popts, pcovs
 
+# Uses scipy.minimize to find the exact point that minimizes the data
+def correction2(datascans, initialparams, minindex, maxindex):
+    popts = []
+    pcovs = []
+    pvals = []
+    encoderpeaks = []
+    N = len(datascans['signal'])
+    for i in xrange(N):
+        x = datascans['encoder-driftcorrected'][i][minindex[i]:maxindex[i]]
+        y = datascans['signal-driftcorrected'][i][minindex[i]:maxindex[i]]
+        popt, pcov = curve_fit(sincfit,x,y,p0=initialparams)
+
+        # Now we can minimize for the -ve of the peak
+        xnew = np.r_[375:400:5000j]
+        x0 = -popt[2]/popt[1]
+        result = opt.minimize(lambda x: -sincfit(x, *popt), x0=x0)
+        pcovs += [pcov]
+        popts += [popt]
+        encoderpeaks += [result["x"][0]]
+
+        # Some plotting in hand
+        # xnew = np.r_[250:550:1000j]
+        # ynew= envelope(xnew,*popt[:-1])
+        # yguess = envelope(xnew, *initialparams[:-1])
+        # fig, ax = plt.subplots(figsize=(15,10))
+        # ax.plot(datascans['encoder-driftcorrected'][i], datascans['signal-driftcorrected'][i], 'b.-')
+        # ax.plot(xnew, ynew, 'r-')
+        # ax.plot(xnew, yguess, 'k-')
+        # ax.grid(which='major', axis='x', linewidth=0.75, linestyle='-', color='0.95')
+        # ax.grid(which='minor', axis='x', linewidth=0.25, linestyle='-', color='0.95')
+        # ax.grid(which='major', axis='y', linewidth=0.75, linestyle='-', color='0.95')
+        # ax.grid(which='minor', axis='y', linewidth=0.25, linestyle='-', color='0.95')
+        # ax.axis('tight')
+        # plt.savefig(str(i) + '.png')
+        # plt.close()
+    return popts, pcovs, encoderpeaks
+
 def sinccorrection(self, datascans):
     initialparams = []
     if self.fit95:
@@ -242,6 +285,38 @@ def sinccorrection(self, datascans):
     #     plt.close()
     return (datascans['encoder-driftcorrected'] - encoderpeaks)*(2/c)
 
+def sinccorrection2(self, datascans):
+    initialparams = []
+    if self.fit95:
+        initialparams = np.array([1.5e-4,40/c,-51.6,1190./c]) # When no sqrt
+        # initialparams = np.array([1.4e-2,40/c,-51.6,1190./c])
+    else:
+        initialparams = np.array([1.5e-4,40/c,-51.6,1862.3/c]) # When no sqrt
+        # initialparams = np.array([1.4e-2,40/c,-51.6,1862.3/c])
+    minindex = map(lambda x: np.where(x >= 375)[0][0], datascans['encoder-driftcorrected'])
+    maxindex = map(lambda x: np.where(x <= 400)[0][-1], datascans['encoder-driftcorrected'])
+    # print(minindex, maxindex)
+    # print (datascans['encoder'][0][minindex[0]])
+
+    popts, pcovs, peaks = correction2(datascans, initialparams, minindex, maxindex)
+    peaks = np.array(peaks)[:, np.newaxis]
+    # print ("The shape of popts is {0}".format((len(popts), len(popts[0]))))
+    signalpeaks = np.array(map(lambda x: sincfit(-x[2]/x[1], *x), popts))
+    cosineshift = np.array(map(lambda x: np.cos((-x[2]/x[1])*x[-1]), popts))
+    phaseshift = np.round(map(lambda x: ((-x[2]/x[1])*(x[-1])/np.pi), popts))
+    encoderpeaks = np.array(map(lambda x, N: (np.pi/x[-1])*N, popts, phaseshift))[:,np.newaxis]
+
+    self.signalpeaks = signalpeaks
+    # encoderpeaks = np.array(map(lambda x:-x[2]/x[1], popts))[:,np.newaxis]
+    relerr = np.array(map(lambda sigx, x: (sigx[2,2]/(x[2]**2) +
+        sigx[1,1]/(x[1])**2 - 2*sigx[2,1]/(x[1]*x[2]))**0.5, pcovs, popts))[:,np.newaxis]
+    encoderpeakerr = encoderpeaks*relerr
+    print("\n")
+    for i in xrange(len(encoderpeaks)):
+        print("for the scan {0:d} the position ".format(i)+\
+            "of zero p.d is {0:1.6f} +/- {1:1.6f}".format(peaks[i, 0], encoderpeakerr[i,0]))
+    return (datascans['encoder-driftcorrected'] - peaks)*(2/c)
+
 def quadcorrection(datascans):
     peaks = np.argmax(datascans['signal-driftcorrected'], axis=1)
     minindex = peaks - 1
@@ -276,8 +351,7 @@ def getfft(datascans):
 def getthresh(self, datascans):
     N = len(datascans['signal'])
     x = np.vstack([self.frequency[self.thresh]]*N)
-    y = (np.real(datascans['signal-fft'])[np.vstack([self.thresh]*N)])
-    y = y.reshape((N,-1))
+    y = np.real(datascans['signal-fft'])[:, self.thresh]
     return x, y
 
 def validateguess(rawguess):
@@ -293,9 +367,7 @@ def getpower(y, x):
     return simps(y**2, x=x, even='avg', axis=1)
 
 def obtainguess():
-    guesses = [
-
-    ]
+    guesses = []
     while (True):
         try:
             rawguess = raw_input("\nEnter an updated guess in the format R, T, L, C: ").split(',')
@@ -460,8 +532,8 @@ class FTSscan(object):
         if not self.driftcorrected:
             raise RuntimeError("Scans must be drift corrected before peak correction")
         if self.useSincFitting:
-            self.sampledata['encoder-driftcorrected'] = sinccorrection(self, self.sampledata)
-            self.nosampledata['encoder-driftcorrected'] = sinccorrection(self, self.nosampledata)
+            self.sampledata['encoder-driftcorrected'] = sinccorrection2(self, self.sampledata)
+            self.nosampledata['encoder-driftcorrected'] = sinccorrection2(self, self.nosampledata)
         else:
             self.sampledata['encoder-driftcorrected'] = quadcorrection(self.sampledata)
             self.nosampledata['encoder-driftcorrected'] = quadcorrection(self.nosampledata)
@@ -548,11 +620,11 @@ class FTSscan(object):
         self.sampledata['signal-fft'] = getfft(self.sampledata)
         self.nosampledata['signal-fft'] = getfft(self.nosampledata)
         if self.fit95:
-            self.thresh = np.logical_and(self.frequency >= 90,\
-             self.frequency <= 100) #For 95 GHz
+            self.thresh = np.logical_and(self.frequency >= 80,\
+            self.frequency <= 110) #For 95 GHz
         else:
-            self.thresh = np.logical_and(self.frequency >= 140,\
-             self.frequency <= 159)
+            self.thresh = np.logical_and(self.frequency >= 130,\
+                self.frequency <= 169)
 
         #sample case
         self.nosampledata['freq-interest'], self.nosampledata['fft-interest'] = getthresh(self, self.nosampledata)
@@ -581,41 +653,63 @@ class FTSscan(object):
              'y-label':r'Signal', 'plt-type':'fft' }
             
             print ("Starting to make plots of the fourier transforms")
-            # fig, ax = plt.subplots(figsize=(15,10))
-            # ax.plot(self.sampledata['freq-interest'][0][::4],\
-            #     np.real(self.sampledata['signal-fft'][0][self.thresh][::4]),\
-            #     'r-', label='Real')
-            # ax.plot(self.sampledata['freq-interest'][0][::4],\
-            #     np.abs(np.imag(self.sampledata['signal-fft'][0][self.thresh][::4])),\
-            #     'b-', label='Imag')
-            # ax.legend(loc='best')
-            # plt.savefig('sampledata_realvsimag.png')
+            fig, ax = plt.subplots(figsize=(15,10))
+            ax.plot(self.nosampledata['freq-interest'][0][::4],\
+                np.real(self.nosampledata['signal-fft'][0][self.thresh][::4]),\
+                'r-', label='Real')
+            ax.plot(self.nosampledata['freq-interest'][0][::4],\
+                np.abs(np.imag(self.nosampledata['signal-fft'][0][self.thresh][::4])),\
+                'b-', label='Imag')
+            myaxis = ax.axis()
+            ax.legend(loc='best')
+            plt.savefig('sampledata_realvsimag.png')
 
-            # fig, ax = plt.subplots(figsize=(15,10))
-            # ax.plot(self.nosampledata['freq-interest'][0][::4],\
-            #     np.real(self.nosampledata['signal-fft'][0][self.thresh][::4]),\
-            #     'r-', label='Real')
-            # ax.plot(self.nosampledata['freq-interest'][0][::4],\
-            #     np.abs(np.imag(self.nosampledata['signal-fft'][0][self.thresh][::4])),\
-            #     'b-', label='Imag')
-            # ax.legend()
-            # plt.savefig('nosampledata_realvsimag.png')
-            # plt.close()
+            fig, ax = plt.subplots(figsize=(15,10))
+            ax.plot(self.sampledata['freq-interest'][0][::2],\
+                np.real(self.sampledata['signal-fft'][0][self.thresh][::2]),\
+                'r-', label='Real')
+            ax.plot(self.sampledata['freq-interest'][0][::2],\
+                np.abs(np.imag(self.sampledata['signal-fft'][0][self.thresh][::2])),\
+                'b-', label='Imag')
+            ax.axis(myaxis)
+            ax.legend()
+            plt.savefig('nosampledata_realvsimag.png')
+            plt.close()
+
+            # makeplots(self, self.nosampledata['freq-interest'],\
+            #     self.nosampledata['fft-interest'],tag='no-sample', **pltparams)
+
+            # makeplots(self, self.sampledata['freq-interest'],\
+            #     self.sampledata['fft-interest'],tag='sample', **pltparams)
+
+            # makeplots(self, self.nosampledata['freq-interest'],\
+            #     self.nosampledata['fft-interest'],tag='no-sample', **pltparams)
+
+            # makeplots(self, self.sampledata['freq-interest'],\
+            #     self.sampledata['fft-interest'],tag='sample', **pltparams)
+
+            # makeplots(self, self.nosampledata['freq-interest'],\
+            #     np.imag(self.nosampledata['signal-fft'][:, self.thresh]),tag='no-sample-imag', **pltparams)
+
+            # makeplots(self, self.sampledata['freq-interest'],\
+            #     np.imag(self.sampledata['signal-fft'][:, self.thresh]),tag='sample-imag', **pltparams)
+
+            pltparams['y-label'] = r'Phase'
             makeplots(self, self.nosampledata['freq-interest'],\
-             self.nosampledata['fft-interest'],tag='no-sample', **pltparams)
+                np.unwrap(np.angle(self.nosampledata['signal-fft'])[:, self.thresh]),tag='no-sample-phase', **pltparams)
 
             makeplots(self, self.sampledata['freq-interest'],\
-             self.sampledata['fft-interest'],tag='sample', **pltparams)
+                np.unwrap(np.angle(self.sampledata['signal-fft'])[:, self.thresh]),tag='sample-phase', **pltparams)
             print ("All the plots of the fourier transforms have been completed ")
         self.transformed = True
 
     def averageFFT(self):
         if not self.transformed:
             raise RuntimeError("FFTs of scans must be taken before they can be averaged")
-        self.sampledata['fft-averaged'] = np.mean(np.real(self.sampledata['fft-interest']), axis=0)
-        self.sampledata['fft-error'] = np.std(np.real(self.sampledata['fft-interest']), axis=0)
-        self.nosampledata['fft-averaged'] = np.mean(np.real(self.nosampledata['fft-interest']), axis=0)
-        self.nosampledata['fft-error'] = np.std(np.real(self.nosampledata['fft-interest']), axis=0)
+        self.sampledata['fft-averaged'] = np.mean(np.real(self.sampledata['signal-fft']), axis=0)
+        self.sampledata['fft-error'] = np.std(np.real(self.sampledata['signal-fft']), axis=0)
+        self.nosampledata['fft-averaged'] = np.mean(np.real(self.nosampledata['signal-fft']), axis=0)
+        self.nosampledata['fft-error'] = np.std(np.real(self.nosampledata['signal-fft']), axis=0)
 
         if self.generateplots:
             pltparams = {'x-label':r'Frequency [GHz]',\
@@ -630,8 +724,8 @@ class FTSscan(object):
 
             # Plot the averaged sample vs no-sample
             fig, ax = plt.subplots(figsize=(15,10))
-            ax.plot(self.frequency[self.thresh][::2], self.nosampledata['fft-averaged'][::2], 'k', label='no sample')
-            ax.plot(self.frequency[self.thresh][::2], self.sampledata['fft-averaged'][::2], 'r', label='sample');
+            ax.plot(self.frequency[self.thresh][::2], self.nosampledata['fft-averaged'][self.thresh][::2], 'k', label='no sample')
+            ax.plot(self.frequency[self.thresh][::2], self.sampledata['fft-averaged'][self.thresh][::2], 'r', label='sample');
             ax.set_xlabel('Frequency [GHz]')
             ax.set_ylabel('Signal');
             ax.legend(loc='best');
@@ -643,12 +737,20 @@ class FTSscan(object):
     def getratio(self):
         if not self.averaged:
             raise RuntimeError("FFTs of scans must be averaged before the ratio can be computed")
+
+        if self.fit95:
+            self.thresh = np.logical_and(self.frequency >= 88,\
+            self.frequency <= 102) #For 95 GHz
+        else:
+            self.thresh = np.logical_and(self.frequency >= 128,\
+                self.frequency <= 161)
+
         self.nosampledata['relative-error'] = self.nosampledata['fft-error']/self.nosampledata['fft-averaged']
         self.sampledata['relative-error'] = self.sampledata['fft-error']/self.sampledata['fft-averaged']
         # self.ratio = self.sampledata['fft-interest']/self.nosampledata['fft-interest']
-        self.ratio_avg= self.sampledata['fft-averaged']/self.nosampledata['fft-averaged']
+        self.ratio_avg= (self.sampledata['fft-averaged']/self.nosampledata['fft-averaged'])[self.thresh]
         self.ratio_err = self.ratio_avg*np.sqrt(self.nosampledata['relative-error']**2 + \
-            self.sampledata['relative-error']**2)
+            self.sampledata['relative-error']**2)[self.thresh]
 
         # f = open('no-sqrt-1801.txt', 'w')
         # f.write('# Frequency Ratio Error\n')
@@ -658,8 +760,10 @@ class FTSscan(object):
             # Plot the relative error
             print("\nStarting to make plots for the transmission ratio")
             fig, ax = plt.subplots(figsize=(15,10))
-            ax.plot(self.frequency[self.thresh][::2], self.sampledata['relative-error'][::2], 'b', label='Sample')
-            ax.plot(self.frequency[self.thresh][::2], self.nosampledata['relative-error'][::2], 'g', label='No Sample')
+            ax.plot(self.frequency[self.thresh][::2], self.sampledata['relative-error'][self.thresh][::2],\
+                'b.', label='Sample')
+            ax.plot(self.frequency[self.thresh][::2], self.nosampledata['relative-error'][self.thresh][::2],\
+                'r.', label='No Sample')
             ax.legend(loc='best');
             ax.axis('tight');
             ax.set_xlabel('Frequency [GHz]')
@@ -677,7 +781,7 @@ class FTSscan(object):
             #     ax.set_ylabel(kwargs['y-label'])
             #     ax.axis('tight')
             ax.errorbar(self.frequency[self.thresh][::2], self.ratio_avg[::2],\
-                yerr = self.ratio_err[::2],fmt='-',\
+                yerr = self.ratio_err[::2],fmt='k.',\
                 ecolor='k', color='k')
             xmin, xmax, ymin, ymax = ax.axis('tight')
             ax.hlines(1.0, xmin, xmax, colors='r', linestyles='solid');
