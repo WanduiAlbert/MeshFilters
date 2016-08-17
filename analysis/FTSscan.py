@@ -613,6 +613,52 @@ class FTSscan(object):
             print ("All the plots of the symmetrized interferograms have been completed ")
         self.symmetrized = True
 
+    def checkphase(self):
+        datascans = self.nosampledata
+        y = datascans['signal-driftcorrected']
+        x = datascans['encoder-driftcorrected']
+        n = np.arange(y.shape[1])
+        print (n.shape)
+        print (y.shape)
+        # Z = fft(y, axis = 1)
+        # Y = fft(n*y, axis = 1)
+
+        # uphase = -2*np.pi(Z.real*Y.real + Z.imag*Y.imag)/np.abs(Z)**2
+
+        # index = np.array(map(lambda x: np.logical_and(x >= -0.2,x <= 0.2 ),\
+        #     datascans['encoder-driftcorrected']))
+        # y = np.array(map(lambda x, sel: x[sel], datascans['signal-driftcorrected'],\
+        #     index))
+        # x = np.array(map(lambda x, sel: x[sel], datascans['encoder-driftcorrected'],\
+        #     index))
+
+        # window = np.array(map(lambda signal: np.blackman(len(signal)), y))
+        # y *= window
+        # windowfft = np.array(map(lambda x: fft(x), y))
+
+        # dx = np.array(map(lambda x: x[1] - x[0], x))
+        # windowfreq = np.array(map(lambda x, dx: fftfreq(len(x), dx), x, dx))
+
+        # Nmask = 200
+        # mask = np.ones(Nmask)
+        # freqthresh = map(lambda freq: np.logical_and(freq >= 0, freq <= 200), windowfreq)
+
+        # N = len(windowfft)
+        # for i in xrange(N):
+        #     phase = np.convolve(np.angle(windowfft[i]), mask, mode='same')/Nmask
+        #     fig, ax = plt.subplots(figsize=(15,10))
+        #     maxfft = np.max(np.abs(windowfft[i])[freqthresh[i]])
+        #     ax.plot(windowfreq[i][freqthresh[i]], np.abs(windowfft[i])[freqthresh[i]]/maxfft, 'b.-', label='Abs')
+        #     ax.plot(windowfreq[i][freqthresh[i]], phase[freqthresh[i]]/np.pi, 'r.-', label='Phase')
+        #     ax.set_xlabel(r'Frequency [GHz]')
+        #     ax.set_ylabel(r'Angle [radians]')
+        #     ax.legend()
+        #     ax.axis('tight')
+        #     ax.set_xticklabels(["{0:3.0f}".format(t) for t in ax.get_xticks()])
+        #     ax.set_yticklabels(["{0:3.4f}".format(t) for t in ax.get_yticks()])
+        #     plt.savefig("no-sample_{0:d}.png".format(i))
+        
+
     def getFFTs(self):
         if not self.symmetrized:
             raise RuntimeError("Scans must be symmetrized before taking FFTs")
@@ -631,12 +677,16 @@ class FTSscan(object):
         self.sampledata['freq-interest'], self.sampledata['fft-interest'] = getthresh(self, self.sampledata)
 
         x = self.frequency
-        self.sampledata['fft-power'] = getpower(np.real(self.sampledata['signal-fft']), x)
-        self.nosampledata['fft-power'] = getpower(np.real(self.nosampledata['signal-fft']), x)
+        N = len(self.sampledata['signal-fft'][0])
+        self.sampledata['fft-power'] = getpower(np.abs(self.sampledata['signal-fft']), x)/N
+        N = len(self.nosampledata['signal-fft'][0])
+        self.nosampledata['fft-power'] = getpower(np.abs(self.nosampledata['signal-fft']), x)/N
 
         x = self.frequency[self.thresh]
-        self.sampledata['fft-power-interest'] = getpower(np.real(self.sampledata['fft-interest']), x)
-        self.nosampledata['fft-power-interest'] = getpower(np.real(self.nosampledata['fft-interest']), x)
+        N = len(self.sampledata['fft-interest'][0])
+        self.sampledata['fft-power-interest'] = getpower(np.real(self.sampledata['fft-interest']), x)/N
+        N = len(self.nosampledata['fft-interest'][0])
+        self.nosampledata['fft-power-interest'] = getpower(np.real(self.nosampledata['fft-interest']), x)/N
         
         print ("For sample: Average Power is {0} over all frequencies.\n".\
             format(np.average(self.sampledata['fft-power'])))
@@ -696,10 +746,10 @@ class FTSscan(object):
 
             pltparams['y-label'] = r'Phase'
             makeplots(self, self.nosampledata['freq-interest'],\
-                np.unwrap(np.angle(self.nosampledata['signal-fft'])[:, self.thresh]),tag='no-sample-phase', **pltparams)
+                (np.angle(self.nosampledata['signal-fft'])[:, self.thresh]),tag='no-sample-phase', **pltparams)
 
             makeplots(self, self.sampledata['freq-interest'],\
-                np.unwrap(np.angle(self.sampledata['signal-fft'])[:, self.thresh]),tag='sample-phase', **pltparams)
+                (np.angle(self.sampledata['signal-fft'])[:, self.thresh]),tag='sample-phase', **pltparams)
             print ("All the plots of the fourier transforms have been completed ")
         self.transformed = True
 

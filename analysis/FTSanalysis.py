@@ -17,10 +17,11 @@ def scan_analysis(dirpath, etalonlen, frequency):
     myscan.generateplots = True 
     myscan.peakcorrect()
     myscan.symmetrize()
-    myscan.getFFTs()
-    # # myscan.generateplots = False 
-    myscan.averageFFT()
-    myscan.getratio()
+    myscan.checkphase()
+    # myscan.getFFTs()
+    # # # myscan.generateplots = False 
+    # myscan.averageFFT()
+    # myscan.getratio()
     # # myscan.generateplots = False
     # myscan.checkguesses()
     # # myscan.generateplots = True 
