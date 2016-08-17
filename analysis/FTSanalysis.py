@@ -14,14 +14,15 @@ def scan_analysis(dirpath, etalonlen, frequency):
         generateplots=False, useSincFitting=True, numinterppoints=15)
     myscan.initialize()
     myscan.driftcorrect()
-    myscan.generateplots = True 
     myscan.peakcorrect()
     myscan.symmetrize()
+    myscan.getFFTs()
+    myscan.generateplots = True 
+    myscan.phasecorrect()
     myscan.checkphase()
-    # myscan.getFFTs()
     # # # myscan.generateplots = False 
-    # myscan.averageFFT()
-    # myscan.getratio()
+    myscan.averageFFT()
+    myscan.getratio()
     # # myscan.generateplots = False
     # myscan.checkguesses()
     # # myscan.generateplots = True 
