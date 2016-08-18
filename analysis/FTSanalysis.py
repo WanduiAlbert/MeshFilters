@@ -10,7 +10,7 @@ import glob
 
 def scan_analysis(dirpath, etalonlen, frequency):
 
-    myscan = fs.FTSscan(dirpath, frequency, etalonlen,useonearm=False,\
+    myscan = fs.FTSscan(dirpath, frequency, etalonlen,useonearm=True,\
         generateplots=True, useSincFitting=True, numinterppoints=15)
     myscan.initialize()
     myscan.driftcorrect()
@@ -33,10 +33,10 @@ def scan_analysis(dirpath, etalonlen, frequency):
 if __name__=='__main__':
     topdir = '../FTS data/'
     plotdir = 'plots/'
-    scandirs = ['18-01 150GHz Xpol', '18-01 150GHz Ypol',\
-    '18-01 95GHz Xpol', '18-01 95GHz Ypol']
+    scandirs = ['18-01-2 150GHz Xpol', '18-01-2 150GHz Ypol',\
+    '18-01-2 95GHz Xpol', '18-01-2 95GHz Ypol']
     freqs = [150, 150, 95, 95]
-    etalonlen = 2.25*25.4#2.625*25.4
+    etalonlen = 3.25*25.4#2.625*25.4
 
     for i, scandir in enumerate(scandirs):
         print ("\nWorking on the scans {0}\n".format(scandir))
