@@ -414,9 +414,14 @@ def getunwrappedphase(self, datascans, tag):
     # Get the derivative of Z/ FFT of n x[n] is i/2Pi*(d/dy)[FFT(x)](y)
     Y = fft(self.frequency*datascans['signal-resampled'], axis = 1)
 
+    # Numerical gradient of the fft accurate dimensionally
+    dnu = self.frequency[1] - self.frequency[0]
+    Zgrad = np.gradient(Z, axis=1)/dnu
+
     fftabs = (np.linalg.norm(Z, axis=1)**2)[:, np.newaxis]
     uphasegrad = -2*np.pi*(Z.real*Y.real + Z.imag*Y.imag)/fftabs
-    uphasegrad /= samplerate # Get the units correctly in rad/ns
+    # No need to divide by samplerate since factors of samplerate cancel out
+    # uphasegrad /= samplerate # Get the units correctly in rad/ns
 
     initial = np.vstack([0]*Z.shape[0])
     uphase = cumtrapz(uphasegrad, self.frequency, axis=1, initial = 0)
@@ -434,6 +439,17 @@ def getunwrappedphase(self, datascans, tag):
 
         print ("The fit to the phase is 2*pi*({0:2.7f} * nu + {1:2.5f})".format(*popt/(2*np.pi)))
         if self.generateplots:
+            fig, ax = plt.subplots(figsize=(15,10))
+            ax.semilogy(self.frequency[self.thresh], np.abs(Y[i][self.thresh]), 'b.', label='n x[n]')
+            ax.semilogy(self.frequency[self.thresh], np.abs(Z[i][self.thresh]), 'r.', label='Z grad')
+            ax.set_xlabel(r'Frequency [GHz]')
+            ax.set_ylabel(r'$\Phi$ [radians]')
+            ax.axis('tight')
+            ax.legend(loc='best')
+            ax.set_xticklabels(["{0:3.0f}".format(t) for t in ax.get_xticks()])
+            ax.set_yticklabels(["{0:3.4f}".format(t) for t in ax.get_yticks()])
+            plt.savefig(tag + "_phase-comparison_{0:d}.png".format(i))
+            plt.close()
             # fig, ax = plt.subplots(figsize=(15,10))
             # ax.plot(self.frequency[self.thresh], uphasegrad[i][self.thresh], 'b.')
             # ax.set_xlabel(r'Frequency [GHz]')
@@ -460,10 +476,19 @@ def getunwrappedphase(self, datascans, tag):
 
 def getphase(self, datascans, tag):
     Z = datascans['signal-fft']
-    Y = np.gradient(Z, axis=1)
+
+    # Numerical gradient of the fft accurate dimensionally
+    dnu = self.frequency[1] - self.frequency[0]
+    Y = np.gradient(Z, axis=1)/dnu
+
+    # First a comparison with the gradient computed through FFT
+    Yold = fft(self.frequency*datascans['signal-resampled'], axis = 1)/self.samplerate
+
+    diff = np.sum(np.abs(Y - Yold)**2, axis=1)
+    print ("\nThe gradient is as effective as {0:3.4e}".format(diff[0]))
     fftabs = (np.linalg.norm(Z, axis=1)**2)[:, np.newaxis]
     uphasegrad = -2*np.pi*(Z.real*Y.real + Z.imag*Y.imag)/fftabs
-    uphasegrad /= self.samplerate # Get the units correctly in rad/ns
+    # uphasegrad /= self.samplerate # Get the units correctly in rad/ns
 
     initial = np.vstack([0]*Z.shape[0])
     uphase = cumtrapz(uphasegrad, self.frequency, axis=1, initial = 0)
@@ -471,15 +496,15 @@ def getphase(self, datascans, tag):
     N = len(Z)
     for i in xrange(N):
         if self.generateplots:
-            fig, ax = plt.subplots(figsize=(15,10))
-            ax.plot(self.frequency[self.thresh], uphasegrad[i][self.thresh], 'b.')
-            ax.set_xlabel(r'Frequency [GHz]')
-            ax.set_ylabel(r'$\Delta\Phi$ [radians/ns]')
-            ax.axis('tight')
-            ax.set_xticklabels(["{0:3.0f}".format(t) for t in ax.get_xticks()])
-            ax.set_yticklabels(["{0:3.4e}".format(t) for t in ax.get_yticks()])
-            plt.savefig(tag + "checked_phase-grad_{0:d}.png".format(i))
-            plt.close()
+            # fig, ax = plt.subplots(figsize=(15,10))
+            # ax.plot(self.frequency[self.thresh], uphasegrad[i][self.thresh], 'b.')
+            # ax.set_xlabel(r'Frequency [GHz]')
+            # ax.set_ylabel(r'$\Delta\Phi$ [radians/ns]')
+            # ax.axis('tight')
+            # ax.set_xticklabels(["{0:3.0f}".format(t) for t in ax.get_xticks()])
+            # ax.set_yticklabels(["{0:3.4e}".format(t) for t in ax.get_yticks()])
+            # plt.savefig(tag + "checked_phase-grad_{0:d}.png".format(i))
+            # plt.close()
 
             fig, ax = plt.subplots(figsize=(15,10))
             ax.plot(self.frequency[self.thresh], uphase[i][self.thresh], 'b.', label='Unwrapped Phase')
@@ -488,7 +513,7 @@ def getphase(self, datascans, tag):
             ax.axis('tight')
             ax.legend(loc='best')
             ax.set_xticklabels(["{0:3.0f}".format(t) for t in ax.get_xticks()])
-            ax.set_yticklabels(["{0:3.4e}".format(t) for t in ax.get_yticks()])
+            ax.set_yticklabels(["{0:3.5f}".format(t) for t in ax.get_yticks()])
             plt.savefig(tag + "checked_phase_{0:d}.png".format(i))
             plt.close()
 
@@ -805,13 +830,19 @@ class FTSscan(object):
             self.thresh = np.logical_and(self.frequency >= 91,\
             self.frequency <= 99) #For 95 GHz
         else:
-            self.thresh = np.logical_and(self.frequency >= 128,\
-                self.frequency <= 157)
+            self.thresh = np.logical_and(self.frequency >= 140,\
+                self.frequency <= 155)
 
         self.nosampledata['signal-fft'] *= np.exp(1j*getunwrappedphase(self, self.nosampledata, "no-sample"))
         self.sampledata['signal-fft'] *= np.exp(1j*getunwrappedphase(self, self.sampledata, "sample"))
     
     def checkphase(self):
+        if self.fit95:
+            self.thresh = np.logical_and(self.frequency >= 89,\
+            self.frequency <= 101) #For 95 GHz
+        else:
+            self.thresh = np.logical_and(self.frequency >= 140,\
+                self.frequency <= 160)
         getphase(self, self.nosampledata, "no-sample")
         getphase(self, self.sampledata, "sample")
 
@@ -820,11 +851,11 @@ class FTSscan(object):
             raise RuntimeError("FFTs of scans must be taken before they can be averaged")
 
         if self.fit95:
-            self.thresh = np.logical_and(self.frequency >= 88,\
-            self.frequency <= 102) #For 95 GHz
+            self.thresh = np.logical_and(self.frequency >= 89,\
+            self.frequency <= 101) #For 95 GHz
         else:
-            self.thresh = np.logical_and(self.frequency >= 122,\
-                self.frequency <= 161)
+            self.thresh = np.logical_and(self.frequency >= 140,\
+                self.frequency <= 160)
 
         self.sampledata['fft-averaged'] = np.mean(np.real(self.sampledata['signal-fft']), axis=0)
         self.sampledata['fft-error'] = np.std(np.real(self.sampledata['signal-fft']), axis=0)
@@ -858,12 +889,12 @@ class FTSscan(object):
         if not self.averaged:
             raise RuntimeError("FFTs of scans must be averaged before the ratio can be computed")
 
-        if self.fit95:
-            self.thresh = np.logical_and(self.frequency >= 88,\
-            self.frequency <= 102) #For 95 GHz
-        else:
-            self.thresh = np.logical_and(self.frequency >= 128,\
-                self.frequency <= 161)
+        # if self.fit95:
+        #     self.thresh = np.logical_and(self.frequency >= 88,\
+        #     self.frequency <= 102) #For 95 GHz
+        # else:
+        #     self.thresh = np.logical_and(self.frequency >= 128,\
+        #         self.frequency <= 161)
 
         self.nosampledata['relative-error'] = self.nosampledata['fft-error']/self.nosampledata['fft-averaged']
         self.sampledata['relative-error'] = self.sampledata['fft-error']/self.sampledata['fft-averaged']
