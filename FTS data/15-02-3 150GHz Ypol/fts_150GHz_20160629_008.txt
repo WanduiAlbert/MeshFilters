@@ -1,4 +1,4 @@
-# # SAMPLE
+# SAMPLE
 FTS 150 GHz source w/circula4 feedhorn and 150 GHz diode detector w/ 
 rect feedhorn and no circ - rect transition; 
 

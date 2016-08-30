@@ -1,4 +1,4 @@
-# # NO SAMPLE
+# NO SAMPLE
 FTS 95 GHz source w/circula4 feedhorn and 95 GHz diode detector w/ 
 rect feedhorn and no circ - rect transition; 
 

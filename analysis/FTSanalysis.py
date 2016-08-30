@@ -33,20 +33,20 @@ def scan_analysis(dirpath, etalonlen, frequency):
 if __name__=='__main__':
     topdir = '../FTS data/'
     plotdir = 'plots/'
-    scandirs = ['18-01-2 150GHz Xpol', '18-01-2 150GHz Ypol',\
-    '18-01-2 95GHz Xpol', '18-01-2 95GHz Ypol']
-    freqs = [150, 150, 95, 95]
-    etalonlen = 3.25*25.4#2.625*25.4
+    scandirs = ['612-613 95GHz Ypol']
+    freqs = [95]
+    etalonlen = 2.25*25.4#2.625*25.4
 
     for i, scandir in enumerate(scandirs):
         print ("\nWorking on the scans {0}\n".format(scandir))
         dirpath = op.join(topdir, scandir, '')
         plotpath = op.join(plotdir,scandir, '')
+        print (dirpath)
         scan_analysis(dirpath, etalonlen, freqs[i])
 
         print("\nAnalysis done. Moving all the plots to {0}\n".format(plotpath))
         if not op.isdir(plotpath):
             os.mkdir(plotpath)
-        sh.mv("-f", sh.glob('*.png'), plotpath)
+        sh.mv("-f", sh.glob('*.pdf'), plotpath)
 
         

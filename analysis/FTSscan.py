@@ -62,7 +62,7 @@ nll = lambda *args: -lnlike(*args) #Negative Log Likelihood
 def lnprior(theta):
     R, T, L, C = theta
     if (0.0 < R < 1.0 and
-        0.0 < T < 1.0 and
+        0.0 < T < 1.5 and
         # 0.0 < R + T <= 1.0 and 
         0.5 < L < 1.5 and
         -2.0 < C < 2.0) :
@@ -122,13 +122,13 @@ def makeplots(self, Xlist, Ylist, tag, **kwargs):
     for i in xrange(N):
         fig, ax = plt.subplots(figsize=(15,10))
         # print len(Xlist[i]), len(Ylist[i]) 
-        ax.plot(Xlist[i], Ylist[i], 'b.')
+        ax.plot(Xlist[i], Ylist[i], 'b-')
         ax.set_xlabel(kwargs['x-label'])
         ax.set_ylabel(kwargs['y-label'])
         ax.axis('tight')
         ax.set_xticklabels(["{0:3.1f}".format(t) for t in ax.get_xticks()])
-        ax.set_yticklabels(["{0:1.6f}".format(t) for t in ax.get_yticks()])
-        plt.savefig(self.plt_savename +'-' + tag + '-' + kwargs['plt-type'] + str(i) + '.png')
+        ax.set_yticklabels(["{0:3.1f}".format(t) for t in ax.get_yticks()])
+        plt.savefig(self.plt_savename +'-' + tag + '-' + kwargs['plt-type'] + str(i) + '.pdf')
         plt.close()
 
 def fftplot(self, datascans, tag, **kwargs):
@@ -143,7 +143,7 @@ def fftplot(self, datascans, tag, **kwargs):
         yerr = datascans['fft-error'][self.thresh][::2], label="averaged",fmt='-',\
         ecolor='k', color='k')
     ax.legend(loc='best')
-    plt.savefig(self.plt_savename +'-' + tag + '-' + kwargs['plt-type'] + '.png')
+    plt.savefig(self.plt_savename +'-' + tag + '-' + kwargs['plt-type'] + '.pdf')
     plt.close()
 
 def convolutioncorrection(datascans, Nmask):
@@ -195,7 +195,7 @@ def correction(datascans, fitfunction, initialparams, minindex, maxindex):
         ax.grid(which='major', axis='y', linewidth=0.75, linestyle='-', color='0.95')
         ax.grid(which='minor', axis='y', linewidth=0.25, linestyle='-', color='0.95')
         ax.axis('tight')
-        plt.savefig(str(i) + '.png')
+        plt.savefig(str(i) + '.pdf')
         plt.close()
         pcovs += [pcov]
         popts += [popt]
@@ -234,7 +234,7 @@ def correction2(datascans, initialparams, minindex, maxindex):
         # ax.grid(which='major', axis='y', linewidth=0.75, linestyle='-', color='0.95')
         # ax.grid(which='minor', axis='y', linewidth=0.25, linestyle='-', color='0.95')
         # ax.axis('tight')
-        # plt.savefig(str(i) + '.png')
+        # plt.savefig(str(i) + '.pdf')
         # plt.close()
     return popts, pcovs, encoderpeaks
 
@@ -284,7 +284,7 @@ def sinccorrection(self, datascans):
     #     ax.grid(which='major', axis='y', linewidth=0.75, linestyle='-', color='0.00')
     #     ax.grid(which='minor', axis='y', linewidth=0.25, linestyle='-', color='0.00')
     #     ax.axis('tight')
-    #     plt.savefig(str(i) + '.png')
+    #     plt.savefig(str(i) + '.pdf')
     #     plt.close()
     return (datascans['encoder-driftcorrected'] - encoderpeaks)*(2/c)
 
@@ -448,7 +448,7 @@ def getunwrappedphase(self, datascans, tag):
             ax.legend(loc='best')
             ax.set_xticklabels(["{0:3.0f}".format(t) for t in ax.get_xticks()])
             ax.set_yticklabels(["{0:3.4f}".format(t) for t in ax.get_yticks()])
-            plt.savefig(tag + "_phase-comparison_{0:d}.png".format(i))
+            plt.savefig(tag + "_phase-comparison_{0:d}.pdf".format(i))
             plt.close()
             # fig, ax = plt.subplots(figsize=(15,10))
             # ax.plot(self.frequency[self.thresh], uphasegrad[i][self.thresh], 'b.')
@@ -457,7 +457,7 @@ def getunwrappedphase(self, datascans, tag):
             # ax.axis('tight')
             # ax.set_xticklabels(["{0:3.0f}".format(t) for t in ax.get_xticks()])
             # ax.set_yticklabels(["{0:3.4f}".format(t) for t in ax.get_yticks()])
-            # plt.savefig(tag + "_phase-grad_{0:d}.png".format(i))
+            # plt.savefig(tag + "_phase-grad_{0:d}.pdf".format(i))
             # plt.close()
 
             fig, ax = plt.subplots(figsize=(15,10))
@@ -469,7 +469,7 @@ def getunwrappedphase(self, datascans, tag):
             ax.legend(loc='best')
             ax.set_xticklabels(["{0:3.0f}".format(t) for t in ax.get_xticks()])
             ax.set_yticklabels(["{0:3.4f}".format(t) for t in ax.get_yticks()])
-            plt.savefig(tag + "_phase_{0:d}.png".format(i))
+            plt.savefig(tag + "_phase_{0:d}.pdf".format(i))
             plt.close()
 
     return np.array(phasecorrections)
@@ -503,7 +503,7 @@ def getphase(self, datascans, tag):
             # ax.axis('tight')
             # ax.set_xticklabels(["{0:3.0f}".format(t) for t in ax.get_xticks()])
             # ax.set_yticklabels(["{0:3.4e}".format(t) for t in ax.get_yticks()])
-            # plt.savefig(tag + "checked_phase-grad_{0:d}.png".format(i))
+            # plt.savefig(tag + "checked_phase-grad_{0:d}.pdf".format(i))
             # plt.close()
 
             fig, ax = plt.subplots(figsize=(15,10))
@@ -514,7 +514,7 @@ def getphase(self, datascans, tag):
             ax.legend(loc='best')
             ax.set_xticklabels(["{0:3.0f}".format(t) for t in ax.get_xticks()])
             ax.set_yticklabels(["{0:3.5f}".format(t) for t in ax.get_yticks()])
-            plt.savefig(tag + "checked_phase_{0:d}.png".format(i))
+            plt.savefig(tag + "checked_phase_{0:d}.pdf".format(i))
             plt.close()
 
 class FTSscan(object):
@@ -602,12 +602,12 @@ class FTSscan(object):
         # If generateplots is true, then generate plots here
         if self.generateplots:
             pltparams = {'x-label':r'Encoder [mm]',\
-             'y-label':r'', 'plt-type':'raw-interferogram' }
+             'y-label':r'Signal [$\mu$V]', 'plt-type':'raw-interferogram' }
             print ("Starting to make plots of raw interferogram ")
             makeplots(self, self.nosampledata['encoder'],\
-             self.nosampledata['signal'], tag='no-sample', **pltparams)
+             self.nosampledata['signal']*1e6, tag='no-sample', **pltparams)
             makeplots(self, self.sampledata['encoder'],\
-             self.sampledata['signal'], tag='sample', **pltparams)
+             self.sampledata['signal']*1e6, tag='sample', **pltparams)
             if self.useonearm:
                 makeplots(self, self.onearmdata['no-sample']['encoder'],\
                     self.onearmdata['no-sample']['signal'], tag='no-sample-one-arm', **pltparams)
@@ -635,12 +635,12 @@ class FTSscan(object):
              self.nosampledata['encoder-driftcorrected'] = convolutioncorrection(self.nosampledata, Nmask)
         if self.generateplots:
             pltparams = {'x-label':r'Encoder [mm]',\
-             'y-label':r'', 'plt-type':'driftcorrected-interferogram' }
+             'y-label':r'Signal [$\mu$V]', 'plt-type':'driftcorrected-interferogram' }
             print ("Starting to make plots of the drift corrected interferograms")
             makeplots(self, self.nosampledata['encoder-driftcorrected'],\
-             self.nosampledata['signal-driftcorrected'], tag='no-sample', **pltparams)
+             self.nosampledata['signal-driftcorrected']*1e6, tag='no-sample', **pltparams)
             makeplots(self, self.sampledata['encoder-driftcorrected'],\
-             self.sampledata['signal-driftcorrected'], tag='sample', **pltparams)
+             self.sampledata['signal-driftcorrected']*1e6, tag='sample', **pltparams)
             print ("All the plots of the drift corrected interferograms have been completed ")
         self.driftcorrected = True
 
@@ -672,12 +672,12 @@ class FTSscan(object):
 
         if self.generateplots:
             pltparams = {'x-label':r'Path Difference [ns]',\
-             'y-label':r'', 'plt-type':'peakcorrected-interferogram' }
+             'y-label':r'Signal [$\mu$V]', 'plt-type':'peakcorrected-interferogram' }
             print ("Starting to make plots of the peak corrected interferograms")
             makeplots(self, self.nosampledata['encoder-driftcorrected'],\
-             self.nosampledata['signal-driftcorrected'], tag='no-sample', **pltparams)
+             self.nosampledata['signal-driftcorrected']*1e6, tag='no-sample', **pltparams)
             makeplots(self, self.sampledata['encoder-driftcorrected'],\
-             self.sampledata['signal-driftcorrected'], tag='sample', **pltparams)
+             self.sampledata['signal-driftcorrected']*1e6, tag='sample', **pltparams)
             print ("All the plots of the peak corrected interferograms have been completed ")
         self.peakcorrected= True
 
@@ -709,7 +709,7 @@ class FTSscan(object):
                 getodd(self.nosampledata['signal-resampled'][0]),\
                 'b-', label='Odd')
             ax.legend(loc='best')
-            plt.savefig('nosampledata_evenodd.png')
+            plt.savefig('nosampledata_evenodd.pdf')
 
             fig, ax = plt.subplots(figsize=(15,10))
             ax.plot(self.encoder_resampled[1:],\
@@ -719,7 +719,7 @@ class FTSscan(object):
                 getodd(self.sampledata['signal-resampled'][0]),\
                 'b-', label='Odd')
             ax.legend(loc='best')
-            plt.savefig('sampledata_evenodd.png')
+            plt.savefig('sampledata_evenodd.pdf')
 
             # pltparams = {'x-label':r'Path Difference [ns]',\
             #  'y-label':r'Signal', 'plt-type':'resampled-interferogram' }
@@ -772,30 +772,30 @@ class FTSscan(object):
         if self.generateplots:
             
             pltparams = {'x-label':r'Frequency [GHz]',\
-             'y-label':r'Signal', 'plt-type':'fft' }
+             'y-label':r'Signal [$\mu$V/Hz]', 'plt-type':'fft' }
             
             print ("Starting to make plots of the fourier transforms")
             fig, ax = plt.subplots(figsize=(15,10))
             ax.plot(self.nosampledata['freq-interest'][0][::4],\
-                np.real(self.nosampledata['signal-fft'][0][self.thresh][::4]),\
+                np.real(self.nosampledata['signal-fft'][0][self.thresh][::4])*1e6,\
                 'r-', label='Real')
             ax.plot(self.nosampledata['freq-interest'][0][::4],\
-                np.abs(np.imag(self.nosampledata['signal-fft'][0][self.thresh][::4])),\
+                np.abs(np.imag(self.nosampledata['signal-fft'][0][self.thresh][::4])*1e6),\
                 'b-', label='Imag')
             myaxis = ax.axis()
             ax.legend(loc='best')
-            plt.savefig('sampledata_realvsimag.png')
+            plt.savefig('sampledata_realvsimag.pdf')
 
             fig, ax = plt.subplots(figsize=(15,10))
             ax.plot(self.sampledata['freq-interest'][0][::2],\
-                np.real(self.sampledata['signal-fft'][0][self.thresh][::2]),\
+                np.real(self.sampledata['signal-fft'][0][self.thresh][::2])*1e6,\
                 'r-', label='Real')
             ax.plot(self.sampledata['freq-interest'][0][::2],\
-                np.abs(np.imag(self.sampledata['signal-fft'][0][self.thresh][::2])),\
+                np.abs(np.imag(self.sampledata['signal-fft'][0][self.thresh][::2]))*1e6,\
                 'b-', label='Imag')
             ax.axis(myaxis)
             ax.legend()
-            plt.savefig('nosampledata_realvsimag.png')
+            plt.savefig('nosampledata_realvsimag.pdf')
             plt.close()
 
             # makeplots(self, self.nosampledata['freq-interest'],\
@@ -881,7 +881,7 @@ class FTSscan(object):
             ax.set_ylabel('Signal');
             ax.legend(loc='best');
             ax.axis('tight');
-            plt.savefig(self.plt_savename + 'no-sample_vs_sample_fft.png')
+            plt.savefig(self.plt_savename + 'no-sample_vs_sample_fft.pdf')
             plt.close()
         self.averaged = True
 
@@ -918,7 +918,7 @@ class FTSscan(object):
             ax.legend(loc='best');
             ax.axis('tight');
             ax.set_xlabel('Frequency [GHz]')
-            plt.savefig(self.plt_savename + 'relative_error.png')
+            plt.savefig(self.plt_savename + 'relative_error.pdf')
 
 
             # Plot the ratios from all the plots
@@ -936,7 +936,7 @@ class FTSscan(object):
                 ecolor='k', color='k')
             xmin, xmax, ymin, ymax = ax.axis('tight')
             ax.hlines(1.0, xmin, xmax, colors='r', linestyles='solid');
-            plt.savefig(self.plt_savename +'-' + 'ratio-averaged' + '.png')
+            plt.savefig(self.plt_savename +'-' + 'ratio-averaged' + '.pdf')
             plt.close()
             print ("All ratio plots completed")
         self.ratioed = True
@@ -969,7 +969,7 @@ class FTSscan(object):
             ax.set_yticklabels(["{0:1.4f}".format(t) for t in ax.get_yticks()])
             ax.grid(which='major')
             ax.set_xlabel('Frequency [GHz]')
-            plt.savefig(self.plt_savename +'-' + 'guessed-fit' + '.png')
+            plt.savefig(self.plt_savename +'-' + 'guessed-fit' + '.pdf')
 
             try: 
                 response = raw_input("Is the guess of the parameters acceptable? ")
@@ -1001,7 +1001,7 @@ class FTSscan(object):
         ax.set_xticklabels(["{0:3.1f}".format(t) for t in ax.get_xticks()])
         ax.set_yticklabels(["{0:1.4f}".format(t) for t in ax.get_yticks()])
         ax.set_xlabel('Frequency [GHz]')
-        plt.savefig(self.plt_savename +'-' + 'guessed-fit' + '.png')
+        plt.savefig(self.plt_savename +'-' + 'guessed-fit' + '.pdf')
         plt.close()
         self.guesses = guesses
         self.guesschecked = True
@@ -1031,7 +1031,7 @@ class FTSscan(object):
             print ("Generating a plot of the best fit to the data")
             fig, ax = plt.subplots(figsize=(15,10))
             ax.errorbar(self.frequency[self.thresh][::2], self.ratio_avg[::2],\
-                yerr = self.ratio_err[::2],fmt='-',\
+                yerr = self.ratio_err[::2],fmt='.',\
                 ecolor='b', color='b', label='data')
             ax.plot(self.frequency[self.thresh],\
              transmissionModel(self.frequency[self.thresh], *self.params),\
@@ -1040,9 +1040,10 @@ class FTSscan(object):
             ax.axis('tight');
             ax.grid(which='major')
             ax.set_xlabel('Frequency [GHz]')
+            ax.set_ylabel(r'ratio')
             ax.set_xticklabels(["{0:3.1f}".format(t) for t in ax.get_xticks()])
             ax.set_yticklabels(["{0:1.4f}".format(t) for t in ax.get_yticks()])
-            plt.savefig(self.plt_savename +'-' + 'best-fit' + '.png')
+            plt.savefig(self.plt_savename +'-' + 'best-fit' + '.pdf')
             plt.close()
             print ("Fitting of the parameters completed. Moving to calculating the errorbars!")
         self.fitted = True
@@ -1077,9 +1078,10 @@ class FTSscan(object):
                     ax.set_xlabel(r'Number of steps')
                     ax.set_xticklabels(["{0:3.1f}".format(t) for t in ax.get_xticks()])
                     ax.set_yticklabels(["{0:1.4f}".format(t) for t in ax.get_yticks()])
-                    plt.savefig(self.plt_savename + '{0}'.format(labels[j]) + '-walkers-plot.png')
+                    plt.savefig(self.plt_savename + '{0}'.format(labels[j]) + '-walkers-plot.pdf')
                     plt.close()
             except RuntimeError as err:
+                plt.close()
                 print ("RuntimeError: {0}.\nPlot wasn't generated. Continuing".format(err))
 
         samples = sampler.chain[:, 200:, :].reshape((-1, ndim))
@@ -1092,9 +1094,10 @@ class FTSscan(object):
                 fig = corner.corner(samples, title_fmt='.4f',labels=["$R$", "$T$", "$L$", "$C$"],\
                     truths=self.params, quantiles=[.16, .50, .84],\
                     fig=figure,show_titles=True, use_math_text=True)
-                fig.savefig(self.plt_savename + 'corner_plot.png')
+                fig.savefig(self.plt_savename + 'corner_plot.pdf')
                 plt.close()
             except RuntimeError as err:
+                plt.close()
                 print ("RuntimeError: {0}.\nPlot wasn't generated. Continuing".format(err))
 
         self.R_mcmc, self.T_mcmc, self.L_mcmc, self.C_mcmc =\
@@ -1129,7 +1132,7 @@ class FTSscan(object):
                 ax.set_xlabel('Frequency [GHz]')
                 ax.set_xticklabels(["{0:3.1f}".format(t) for t in ax.get_xticks()])
                 ax.set_yticklabels(["{0:1.4f}".format(t) for t in ax.get_yticks()])
-                fig.savefig(self.plt_savename + 'projected-space.png')
+                fig.savefig(self.plt_savename + 'projected-space.pdf')
                 plt.close()
             except RuntimeError as err:
                 print ("RuntimeError: {0}.\nPlot wasn't generated. Continuing".format(err))
